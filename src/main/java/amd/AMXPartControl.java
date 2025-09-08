@@ -24,6 +24,7 @@ public class AMXPartControl {
     public final static String EMAIL = "email";
     public final static String ASSIGNEE = "assignee";
     public final static String CONNECTION_ID = "connectionid";
+    public final static String CURRENTSTATE="currentstate";
 
     public AMXPartControl() {}
 
@@ -37,7 +38,7 @@ public class AMXPartControl {
     			CREATE TABLE IF NOT EXISTS amxpartcontroldata(objectid VARCHAR(100) PRIMARY KEY,name VARCHAR(100),
     		    supertype VARCHAR(100),type VARCHAR(100),description TEXT,
     		    createddate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,owner VARCHAR(100),
-    		    email VARCHAR(100),assignee VARCHAR(100),connectionid VARCHAR(100))""";
+    		    email VARCHAR(100),assignee VARCHAR(100),connectionid VARCHAR(100),currentstate VARCHAR(255))""";
     	try {
             Class.forName("org.postgresql.Driver");  
             try (Connection conn = DriverManager.getConnection(url, user, db_password);
@@ -54,8 +55,8 @@ public class AMXPartControl {
      */
     public void createPartControlObject(Map<String, String> dataMap) {
         String insertSQL = "INSERT INTO amxpartcontroldata (" +
-                "objectid, name, supertype, type, description, createddate, owner, email, assignee, connectionid) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "objectid, name, supertype, type, description, createddate, owner, email, assignee, connectionid,currentstate) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)";
         try (
             Connection conn = DriverManager.getConnection(url, user, db_password);
             PreparedStatement pstmt = conn.prepareStatement(insertSQL)
@@ -70,6 +71,7 @@ public class AMXPartControl {
             pstmt.setString(8, dataMap.getOrDefault("email", ""));
             pstmt.setString(9, dataMap.getOrDefault("assignee", ""));
             pstmt.setString(10, dataMap.getOrDefault("connectionid", ""));
+            pstmt.setString(11, dataMap.getOrDefault("currentstate",""));
             pstmt.executeUpdate();
             
            // int result = pstmt.executeUpdate();

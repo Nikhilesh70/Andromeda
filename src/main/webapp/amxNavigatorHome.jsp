@@ -249,6 +249,7 @@
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="plusDropdown">
               <li><a class="dropdown-item" href="#" id="createPartLink">Create Part</a></li>
               <li><a class="dropdown-item" href="#" id="createPartControlLink">Create Part Control</a></li>
+              <li><a class="dropdown-item" href="#" id="createPartSpecificationLink">Create Part Specification</a>
             </ul>
           </li>
           <li class="nav-item ms-3 position-relative">
@@ -525,7 +526,10 @@
   	  e.preventDefault();
   	  window.open('CreatePartControl.jsp', 'CreatePartPopup','width=600,height=700,resizable=yes,scrollbars=yes');
   	});  
-    
+  document.getElementById('createPartSpecificationLink').addEventListener('click',function(e){
+	  e.preventDefault();
+	  window.open('CreatePartSpecification.jsp','CreatePartSpecificatioPopup','width=600,height=700,resizable=yes,scrollable=yes');    
+  });
     
     //search
   function showLoadingSpinner(show) {

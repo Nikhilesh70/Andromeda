@@ -8,125 +8,389 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"/>
-    <title>PC Properties</title>
-
-    <!-- Bootstrap CSS & Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet"/>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background-color: white;
-        }
-        #detailsTable {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            border: 1px solid #dee2e6;
-            padding: 12px;
-            text-align: left;
-        }
-        th {
-            background-color: #f8f9fa;
-            width: 200px;
-        }
-        .error {
-            color: red;
-            margin-top: 20px;
-            text-align: center;
-        }
-        #loadingSpinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 40px auto 10px auto;
-            display: none;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .nav-tabs {
-            margin-bottom: 20px;
-        }
-        .nav-tabs .nav-link.active {
-            background-color: #e9ecef;
-            font-weight: bold;
-        }
-        .toolbar {
-    background-color: #f8f9fa;
-    padding: 8px 12px;  /* reduced padding */
-    border: 1px  solid #ddd;
-    border-bottom: none;
+<meta charset="UTF-8" />
+<title>Part Control Details</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0; padding: 0;
+    background: #fff;
+    color: #333;
+  }
+  .topbar {
     display: flex;
-    gap: 10px;          /* reduced gap */
-    margin-top: 10px;
-    border-radius: 4px;
-	}
-	.toolbar .btn {
-    padding: 2px 6px;
-    font-size: 0.8rem; /* smaller font size */
-	}
+    background: #f5f7fa;
+    border-bottom: 1px solid #cfd3db;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #333;
+  }
 
-		.toolbar .btn i {
-   	 font-size: 1.2rem !important; /* smaller icon size */
-		}
+  .topbar > div {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: #f9fbfd;
+    border: 1px solid #cfd3db;
+    border-right: none;
+    white-space: nowrap;
+  }
 
-        #editPanel {
-            position: fixed;
-            top: 0;
-            right: -400px;
-            width: 400px;
-            height: 100%;
-            background: #fff;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.3);
-            overflow-y: auto;
-            transition: right 0.3s ease;
-            z-index: 1050;
-            padding: 20px;
-            font-family:Arial, sans-serif;
-            font-weight:bold;
-        }
-        #editPanel.active {
-            right: 0;
-        }
-    </style>
+  .topbar > div:last-child {
+    border-right: 1px solid #cfd3db;
+  }
 
-    <script>
-        var loggedInUserAccess = '<%= userAccess.trim() %>';
-    </script>
+  .folder-box {
+    background: #e3e7eb;
+    border: 1px solid #d1d6dc;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  .folder-box img {
+    width: 16px;
+    height: 16px;
+  }
+
+  .part-number {
+    font-weight: 700;
+    font-size: 14px;
+    padding-right: 12px;
+    border-right: 1px solid #cfd3db;
+    margin-right: 12px;
+  }
+
+  .description {
+    font-weight: 600;
+    font-size: 13px;
+    color: #555;
+    padding-right: 12px;
+    border-right: 1px solid #cfd3db;
+    margin-right: 12px;
+  }
+
+  .state-box {
+    font-weight: 600;
+    font-size: 13px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 12px;
+    border-right: 1px solid #cfd3db;
+  }
+
+  .state-label {
+    margin-right: 4px;
+  }
+
+  .btn-submit {
+    background-color: #5c8bff;
+    border: 1px solid #3f70ff;
+    color: white;
+    font-size: 12px;
+    padding: 4px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn-submit:hover {
+    background-color: #3f70ff;
+  }
+
+  .btn-evaluate {
+    background-color: #e5e7ea;
+    border: 1px solid #c6cad2;
+    color: #555;
+    font-size: 12px;
+    padding: 4px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn-evaluate:hover {
+    background-color: #c6cad2;
+  }
+
+  .info-box {
+    font-size: 11px;
+    color: #666;
+    padding-left: 4px;
+    line-height: 1.3;
+  }
+
+  .info-box strong {
+    color: #444;
+  }
+
+  .topbar > div:not(:last-child) {
+    margin-right: -1px; /
+  }
+	
+	.vertical-line img {
+  height: 20px;  
+  width: 1px;   
+  margin: 0 10px; 
+}
+
+  .container {
+    display: flex;
+    height: calc(100vh - 56px); 
+    font-size: 13px;
+  }
+
+.sidebar {
+  width: 16%;
+  background-color: #f8f9fa;
+  border-right: 1px solid #ddd;
+  padding: 20px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.sidebar a {
+  display: block;
+  padding: 8px;
+  color: #333;
+  text-decoration: none;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+.sidebar a:hover {
+  background-color: #e3e7ea; 
+}
+
+.sidebar a.active {
+  background-color:#808080;
+  color: white;
+   font-weight: bold;
+}
+
+.main-panel {
+  flex-grow: 1;
+  padding: 20px;
+  overflow-y: auto;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+
+.container {
+  display: flex;
+  height: calc(100vh - 56px); 
+}
+
+.topbar {
+  display: flex;
+  background: #f5f7fa;
+  border-bottom: 1px solid #cfd3db;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #333;
+}
+
+  .toolbar {
+    margin-bottom: 5px;
+    padding-left: 2px;
+  }
+  .toolbar button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-right: 6px;
+    vertical-align: middle;
+    padding: 2px 4px;
+  }
+  .toolbar button img {
+    vertical-align: middle;
+    width: 18px;
+    height: 18px;
+  }
+  .toolbar button:hover {
+    background-color: #e3f2fd;
+    border-radius: 2px;
+  }
+
+table.properties {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #ddd;
+  font-size: 16px;
+  font-family: Arial, sans-serif;
+  margin: 0 auto;
+}
+
+table.properties th,
+table.properties td {
+  padding: 12px 16px;
+  border: 1px solid #ddd; 
+  vertical-align: middle;
+}
+
+table.properties th {
+  background: #fafafa;
+  font-weight: bold;
+  width: 200px; 
+  text-align: left;
+}
+
+  .folder-icon {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+.properties-container {
+  max-height: 600px; 
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  margin-top: 0;
+}
+
+  #loadingSpinner {
+    display: none;
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    font-size: 14px;
+    color: #666;
+  }
+
+  
+  #errorMessage {
+    display: none;
+    color: red;
+    margin: 10px 0;
+    font-weight: bold;
+  }
+
+  #editPanel {
+  display: none; 
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  width: 320px;
+  max-height: 80vh;          
+  overflow-y: auto;         
+  background: #f9fbfd;
+  border: 1px solid #cfd3db;
+  padding: 15px 15px 50px 15px; 
+  box-shadow: 2px 2px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+
+  #editPanel.active {
+    display: block;
+  }
+
+  #editPanel .mb-3 {
+    margin-bottom: 10px;
+  }
+
+  #editPanel label {
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  #editPanel input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+  }
+
+  #editPanel button {
+    margin-right: 10px;
+    padding: 6px 14px;
+    font-size: 13px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  #saveBtn {
+    background-color: #5c8bff;
+    border: 1px solid #3f70ff;
+    color: white;
+  }
+
+  #saveBtn:hover {
+    background-color: #3f70ff;
+  }
+
+  #cancelBtn {
+    background-color: #e5e7ea;
+    border: 1px solid #c6cad2;
+    color: #555;
+  }
+  #cancelBtn:hover {
+    background-color: #c6cad2;
+  }
+</style>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
-<body class="container mt-4">
-    <!-- Navigation Tabs -->
-    <ul class="nav nav-tabs">
-        <li class="nav-item"><a class="nav-link active">PC-Properties</a></li>
-        <li class="nav-item"><a class="nav-link" href="Partcontrolhistory.jsp?name=<%= request.getParameter("name") %>">History</a></li>
-        <li class="nav-item"><a class="nav-link" href="Lifecycle.jsp?name=<%= request.getParameter("name") %>">Lifecycle</a></li>
-    <li class="nav-item"><a class="nav-link" href="Partcontrolmanagement.jsp?name=<%= request.getParameter("name") %>">PartManagement</a></li>
-    </ul>
+<body>
 
+<div class="topbar">
+
+  <div class="left-section">
+    <div class="image-box">
+      <img src="https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000" alt="Folder Icon" />
+    </div>
+    <div class="part-info">
+      <div class="part-number" style="font-weight: 700; font-size: 14px;"></div>
+      <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px;"></div>
+    </div>
+
+    <div class="vertical-line"></div>
+  </div>
+
+  <div class="right-section">
+    <div class="state-box">
+      <span class="state-label">State:</span>
+      <button id="submitBtn" class="btn-submit">InWork</button>
+      <button id="evaluateBtn" class="btn-evaluate">InApproval</button>
+    </div>
+    <div class="vertical-line"></div>
+    <div class="info-box">
+      
+    </div>
+    <div class="vertical-line"></div>
+  </div>
+</div>
+<div class="container">
+  <div class="sidebar">
+        <a href="Partcontroldetails.jsp" class="nav-link active" data-page="Partcontroldetails.jsp">PC-Properties</a>
+        <a class="nav-link" href="Partcontrolhistory.jsp?name=<%= request.getParameter("name") %>">History</a>
+        <a class="nav-link" href="Partlifecycle.jsp?name=<%= request.getParameter("name") %>">LifeCycle</a>
+        <a class="nav-link" href="Partcontrolmanagement.jsp?name=<%= request.getParameter("name") %>">Part Management</a>
+</div>
+
+  <div class="main-panel">
     <div class="toolbar">
-      <button type="button" class="btn btn-sm btn-light" id="editBtn" data-bs-toggle="tooltip" title="Edit" style="display:none; padding: 2px 6px;">
-    <i class="bi bi-pencil-fill" style="color: #32cd32; font-size: 1.2rem;"></i>
-	</button>
-		<button type="button" class="btn btn-sm btn-light" id="refreshBtn" data-bs-toggle="tooltip" title="Refresh" style="padding: 2px 6px;">
-    <i class="bi bi-arrow-clockwise text-secondary" style="font-size: 1.2rem;"></i>
-		</button>
+      <button id="editBtn" title="Edit">
+        <img src="https://img.icons8.com/ios-glyphs/30/000000/pencil--v1.png" alt="Edit" />
+      </button>
+      <button title="History"></button>
+      <button id="refreshBtn" title="Refresh">
+        <img src="https://img.icons8.com/ios-glyphs/30/000000/refresh.png" alt="Refresh" />
+      </button>
     </div>
 
     <div id="loadingSpinner"></div>
     <div id="errorMessage" class="error"></div>
-
-    <table id="detailsTable" class="table table-bordered"></table>
-
+    <table id="detailsTable" class="properties"></table>
+  </div>
+</div>
     <!-- Edit Side Panel -->
     <div id="editPanel">
         <h5>Edit Part Details</h5>
@@ -136,201 +400,217 @@
             <button id="cancelBtn" type="button" class="btn btn-secondary">Cancel</button>
         </div>
     </div>
-
     <!-- JS Libraries -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script>
-        let currentPartData = {};
+ <script>
+let currentPartData = {};
+let loggedInUserAccess = 'admin';  
 
-        $(document).ready(function () {
-            const objectId = getQueryParam('name');
-            if (!objectId) {
-                showError("No 'name' (ObjectId) parameter found in the URL.");
-                return;
-            }
+$(document).ready(function () {
+  const objectId = getQueryParam('name') || '';
 
-            showLoading(true);
+  if (!objectId) {
+    showError("No 'name' (ObjectId) parameter found in the URL.");
+    return;
+  }
 
-            $.ajax({
-                url: 'http://localhost:8080/andromeda/api/datafetchservice/getinfospc',
-                method: 'GET',
-                data: { objectId },
-                dataType: 'json',
-                success: function (data) {
-                    if (!data || $.isEmptyObject(data)) {
-                        showError("No details found for ObjectId: " + objectId);
-                        return;
-                    }
-                    currentPartData = data;
-                    populateTable(data);
-                    if (loggedInUserAccess.toLowerCase() === 'admin' || loggedInUserAccess.toLowerCase() === 'leader') {
-                        $('#editBtn').show();
-                    }
-                },
-                error: function () {
-                    showError("Error fetching part details.");
-                },
-                complete: function () {
-                    showLoading(false);
-                }
-            });
+  showLoading(true);
 
-            $('#editBtn').on('click', function () {
-                if (!$.isEmptyObject(currentPartData)) {
-                    openEditPanel(currentPartData);
-                } else {
-                    alert("Data not loaded yet.");
-                }
-            });
+  $.ajax({
+    url: 'http://localhost:8080/andromeda/api/datafetchservice/getinfospc',
+    method: 'GET',
+    data: { objectId: objectId }, 
+    dataType: 'json',
+    success: function (data) {
+      console.log("API Response:", data);
 
-            $('#cancelBtn').on('click', closeEditPanel);
+      if (!data || $.isEmptyObject(data)) {
+        showError("No details found for ObjectId: " + objectId);
+        return;
+      }
 
-            $('#saveBtn').on('click', function () {
-                const objectId = getQueryParam('name');
-                const descriptionValue = $('[name="description"]').val();  
+      currentPartData = data;
+      sessionStorage.setItem('partInfo', JSON.stringify(data));
+      populateTopBar(data);
+      populateTable(data);
 
-                if (!descriptionValue || descriptionValue.trim() === '') {
-                    alert("Description cannot be empty.");
-                    return;
-                }
+      if (loggedInUserAccess.toLowerCase() === 'admin' || loggedInUserAccess.toLowerCase() === 'leader') {
+        $('#editBtn').show();
+      } else {
+        $('#editBtn').hide();
+      }
+    },
+    error: function (xhr) {
+      console.error(" AJAX Error:", xhr);
+      showError("Error fetching part details.");
+    },
+    complete: function () {
+      showLoading(false);
+    }
+  });
 
-                const updatedData = {
-                    "description": descriptionValue
-                };
+  $('#editBtn').on('click', function () {
+    if (!$.isEmptyObject(currentPartData)) {
+      openEditPanel(currentPartData);
+    } else {
+      alert("Data not loaded yet.");
+    }
+  });
 
-                $.ajax({
-                    url: 'http://localhost:8080/andromeda/api/datafetchservice/updatepart/' + encodeURIComponent(objectId),
-                    method: 'PUT',
-                    contentType: 'application/json',
-                    data: JSON.stringify(updatedData),
-                    success: function () {
-                        alert("Part updated successfully!");
-                        location.reload();
-                    },
-                    error: function (xhr) {
-                        let msg = "Failed to update part.";
-                        try {
-                            const errResp = JSON.parse(xhr.responseText);
-                            if (errResp.Message) msg = errResp.Message;
-                        } catch (e) {}
-                        alert(msg);
-                    }
-                });
+  $('#cancelBtn').on('click', closeEditPanel);
 
-                closeEditPanel();
-            });
+  $('#saveBtn').on('click', function () {
+    const descriptionValue = $('[name="description"]').val();
 
-            $('#refreshBtn').on('click', function () {
-                location.reload();
-            });
-        });
+    if (!descriptionValue || descriptionValue.trim() === '') {
+      alert("Description cannot be empty.");
+      return;
+    }
 
-        function populateTable(part) {
-            const table = $('#detailsTable');
-            table.empty();
-            $('#errorMessage').hide();
-            $('#detailsTable').show();
+    const updatedData = {
+      description: descriptionValue
+    };
 
-            if (part.name) {
-                const nameRow = $('<tr>');
-                nameRow.append($('<th>').text("Name")); 
-                nameRow.append($('<td>').text(part.name ?? ''));  
-                table.append(nameRow); 
-            }
+    $.ajax({
+      url: 'http://localhost:8080/andromeda/api/datafetchservice/updatepartcontrol/' + encodeURIComponent(objectId),
+      method: 'PUT',
+      contentType: 'application/json',
+      data: JSON.stringify(updatedData),
+      success: function () {
+        alert("Part updated successfully!");
+        location.reload();
+      },
+      error: function (xhr) {
+        let msg = "Failed to update part.";
+        try {
+          const errResp = JSON.parse(xhr.responseText);
+          if (errResp.Message) msg = errResp.Message;
+        } catch (e) {}
+        alert(msg);
+      }
+    });
 
-            const excludedKeys = ['fts_document', 'objectid', 'historyList', 'connectionid','linkedobjectid','name'];
+    closeEditPanel();
+  });
 
-            for (const key in part) {
-                if (!part.hasOwnProperty(key)) continue;
-                if (excludedKeys.includes(key.toLowerCase())) continue;
+  $('#refreshBtn').on('click', function () {
+    location.reload();
+  });
 
-                const row = $('<tr>');
-                row.append($('<th>').text(prettyLabel(key.toLowerCase())));
-                row.append($('<td>').text(part[key] ?? 'N/A'));
-                table.append(row);
-            }
-        }
-        function openEditPanel(part) {
-            console.log("Opening edit panel with data:", part);  
+  function populateTopBar(data) {
+    $('.part-number').text(data.name || '');
+    $('.part-type').text(data.type || '');
+    $('.part-owner').text(data.owner || '');
+    $('.part-created').text(data.createddate || '');
+    if (data.state) {
+      $('<span>')
+        .addClass('state-label')
+        .text('State: ' + data.state)
+        .prependTo('.state-box');
+    }
+  }
 
-            const form = $('#editForm');
-            form.empty();
+  function populateTable(part) {
+    const table = $('#detailsTable');
+    table.empty();
+    $('#errorMessage').hide();
+    $('#detailsTable').show();
 
-            const editableFields = ['description']; 
+    if (part.name) {
+      const nameRow = $('<tr>');
+      nameRow.append($('<th>').text("Name"));
+      nameRow.append($('<td>').text(part.name ?? ''));
+      table.append(nameRow);
+    }
 
-            for (const key in part) {
-                if (!part.hasOwnProperty(key)) continue;
-                if (key === 'objectid' || key === 'historyList' || key === 'fts_document' || key === 'connectionid' || key==='linkedobjectid'|| key==='name') continue;
-                const rawValue = part[key] ?? '';
-                const safeId = 'edit_' + key.replace(/[^a-zA-Z0-9]/g, '_');
-                const lowerKey = key.toLowerCase();
-                const label = prettyLabel(lowerKey);
+    const excludedKeys = ['fts_document', 'objectid', 'historyList', 'connectionid', 'linkedobjectid', 'name'];
 
-                const isEditable = editableFields.includes(lowerKey);
+    for (const key in part) {
+      if (!part.hasOwnProperty(key)) continue;
+      if (excludedKeys.includes(key.toLowerCase())) continue;
+      if (key.toLowerCase() === 'currentstate' && (!part[key] || part[key].trim() === '')) {
+          continue;
+      }
+      const row = $('<tr>');
+      row.append($('<th>').text(prettyLabel(key.toLowerCase())));
+      row.append($('<td>').text(part[key] ?? 'N/A'));
+      table.append(row);
+    }
+  }
 
-                console.log(`Adding field: ${key} (label: ${label}), editable: ${isEditable}`);
+  function openEditPanel(part) {
+    const form = $('#editForm');
+    form.empty();
 
-                const formGroup = $('<div class="mb-3"></div>');
+    const editableFields = ['description'];
 
-                const labelEl = $('<label></label>')
-                    .addClass('form-label')
-                    .attr('for', safeId)
-                    .text(label);
+    for (const key in part) {
+      if (!part.hasOwnProperty(key)) continue;
+      if (['objectid', 'historyList', 'fts_document', 'connectionid', 'linkedobjectid', 'name'].includes(key)) continue;
+      if (key.toLowerCase() === 'currentstate' && (!part[key] || part[key].trim() === '')) {
+          continue;
+      }
+      const rawValue = part[key] ?? '';
+      const safeId = 'edit_' + key.replace(/[^a-zA-Z0-9]/g, '_');
+      const lowerKey = key.toLowerCase();
+      const label = prettyLabel(lowerKey);
+      const isEditable = editableFields.includes(lowerKey);
 
-                const inputEl = $('<input>')
-                    .attr('type', 'text')
-                    .addClass('form-control')
-                    .attr('id', safeId)
-                    .attr('name', lowerKey)
-                    .val(rawValue);
+      const formGroup = $('<div class="mb-3"></div>');
+      const labelEl = $('<label></label>').addClass('form-label').attr('for', safeId).text(label);
+      const inputEl = $('<input>')
+        .attr('type', 'text')
+        .addClass('form-control')
+        .attr('id', safeId)
+        .attr('name', lowerKey)
+        .val(rawValue);
 
-                if (!isEditable) {
-                    inputEl.attr('readonly', true);
-                }
+      if (!isEditable) {
+        inputEl.attr('readonly', true);
+      }
 
-                formGroup.append(labelEl);
-                formGroup.append(inputEl);
-                form.append(formGroup);
-            }
+      formGroup.append(labelEl);
+      formGroup.append(inputEl);
+      form.append(formGroup);
+    }
 
-            $('#editPanel').addClass('active');
-        }
+    $('#editPanel').addClass('active');
+  }
 
-        function closeEditPanel() {
-            $('#editPanel').removeClass('active');
-        }
+  function closeEditPanel() {
+    $('#editPanel').removeClass('active');
+  }
 
-        function getQueryParam(param) {
-            return new URLSearchParams(window.location.search).get(param);
-        }
+  function getQueryParam(param) {
+    return new URLSearchParams(window.location.search).get(param);
+  }
 
-        function showLoading(show) {
-            $('#loadingSpinner').css('display', show ? 'block' : 'none');
-        }
+  function showLoading(show) {
+    $('#loadingSpinner').css('display', show ? 'block' : 'none');
+  }
 
-        function showError(msg) {
-            $('#errorMessage').text(msg).show();
-            $('#detailsTable').hide();
-            showLoading(false);
-        }
+  function showError(msg) {
+    $('#errorMessage').text(msg).show();
+    $('#detailsTable').hide();
+    showLoading(false);
+  }
 
-        function prettyLabel(key) {
-            const map = {
-                description: "Description",
-                supertype: "Supertype",
-                type: "Type",
-                owner: "Owner",
-                createddate: "Created Date",
-                modifieddate: "Modified Date",
-                status: "Status",
-                version: "Version"
-                
-            };
-            return map[key] || key;
-        }
-
-    </script>
+  function prettyLabel(key) {
+    const map = {
+      description: "Description",
+      supertype: "Supertype",
+      type: "Type",
+      owner: "Owner",
+      createddate: "Created Date",
+      modifieddate: "Modified Date",
+      status: "Status",
+      version: "Version"
+    };
+    return map[key] || key.charAt(0).toUpperCase() + key.slice(1);
+  }
+});
+</script>
 </body>
 </html>

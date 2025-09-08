@@ -83,12 +83,8 @@ public class DataFetchService {
     @Path("/createpartcontrol")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response createPartControl(@FormParam("SuperType") String supertype,
-                                     @FormParam("Type") String type,
-                                     @FormParam("Description") String description,
-                                     @FormParam("Assignee") String assignee,
-                                     @Context HttpServletRequest request) {
-
+    public Response createPartControl(@FormParam("SuperType") String supertype, @FormParam("Type") String type,
+          @FormParam("Description") String description,@FormParam("Assignee") String assignee,@Context HttpServletRequest request) {
         JSONObject resp = new JSONObject();
         HttpSession session = request.getSession(true);
         if (session == null
@@ -97,7 +93,6 @@ public class DataFetchService {
             resp.put("Status", "Failed").put("Message", "User not logged in.");
             return Response.status(Response.Status.UNAUTHORIZED).entity(resp.toString()).build();
         }
-
         String username = (String) session.getAttribute("username");
         String emailId = (String) session.getAttribute("emailId");
 
@@ -109,9 +104,9 @@ public class DataFetchService {
             resp.put("Status", "Failed").put("Message", "Missing required fields.");
             return Response.status(Response.Status.BAD_REQUEST).entity(resp.toString()).build();
         }
-
         try (Connection conn = DriverManager.getConnection(url, user, db_password)) {
-            // Generate objectId 
+
+            // Generate objectId
             SecureRandom random = new SecureRandom();
             byte[] bytes = new byte[8];
             random.nextBytes(bytes);
@@ -121,7 +116,7 @@ public class DataFetchService {
                 objectIdBuilder.append(String.format("%04X", part));
                 if (i < bytes.length - 2) objectIdBuilder.append(".");
             }
-            String objectId = objectIdBuilder.toString() +".PACO";
+            String objectId = objectIdBuilder.toString() + ".PACO";
             String prefix = "PC-";
             int maxNum = 0;
             String selectMaxNum = "SELECT name FROM amxpartcontroldata WHERE name LIKE ?";
@@ -137,8 +132,7 @@ public class DataFetchService {
                                 if (num > maxNum) {
                                     maxNum = num;
                                 }
-                            } catch (NumberFormatException ignored) {
-                            }
+                            } catch (NumberFormatException ignored) {}
                         }
                     }
                 }
@@ -147,9 +141,25 @@ public class DataFetchService {
             String name = String.format("%s%06d", prefix, nextNum);
             String createdDate = LocalDateTime.now()
                     .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String fetchStateRule = "SELECT rulevalue FROM amxschemarules WHERE rulename = 'PartControlStates'";
+            String initialState = "InWork"; 
+
+            try (PreparedStatement stateStmt = conn.prepareStatement(fetchStateRule);
+                 ResultSet stateRs = stateStmt.executeQuery()) {
+                if (stateRs.next()) {
+                    String ruleValue = stateRs.getString("rulevalue");
+                    if (ruleValue != null && !ruleValue.trim().isEmpty()) {
+                        String[] states = ruleValue.split("\\|");
+                        if (states.length > 0) {
+                            initialState = states[0].trim();
+                        }
+                    }
+                }
+            }
+            // Insert into amxpartcontroldata
             String insertSQL = "INSERT INTO amxpartcontroldata " +
-                    "(objectid, name, supertype, type, description, createddate, owner, email, assignee, connectionid,linkedobjectid) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)";
+                    "(objectid, name, supertype, type, description, createddate, owner, email, assignee, connectionid, linkedobjectid, currentstate) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             try (PreparedStatement insertPS = conn.prepareStatement(insertSQL)) {
                 insertPS.setString(1, objectId);
                 insertPS.setString(2, name);
@@ -162,24 +172,27 @@ public class DataFetchService {
                 insertPS.setString(9, assignee);
                 insertPS.setString(10, "");
                 insertPS.setString(11, "");
+                insertPS.setString(12, initialState);
                 insertPS.executeUpdate();
             }
+
+            // Insert or update partcontrolhistory
             String historyMsg = "Created by " + username + " at " + createdDate;
-            String hSelect = "SELECT history FROM parthistory WHERE objectid = ?";
+            String hSelect = "SELECT history FROM partcontrolhistory WHERE objectid = ?";
             try (PreparedStatement hSel = conn.prepareStatement(hSelect)) {
                 hSel.setString(1, objectId);
                 try (ResultSet hrs = hSel.executeQuery()) {
                     if (hrs.next()) {
                         String hist = hrs.getString("history");
                         String combined = hist + " | " + historyMsg;
-                        String hUpdate = "UPDATE parthistory SET history = ? WHERE objectid = ?";
+                        String hUpdate = "UPDATE partcontrolhistory SET history = ? WHERE objectid = ?";
                         try (PreparedStatement hUpd = conn.prepareStatement(hUpdate)) {
                             hUpd.setString(1, combined);
                             hUpd.setString(2, objectId);
                             hUpd.executeUpdate();
                         }
                     } else {
-                        String hInsert = "INSERT INTO parthistory (objectid, history) VALUES (?, ?)";
+                        String hInsert = "INSERT INTO partcontrolhistory (objectid, history) VALUES (?, ?)";
                         try (PreparedStatement hIns = conn.prepareStatement(hInsert)) {
                             hIns.setString(1, objectId);
                             hIns.setString(2, historyMsg);
@@ -188,22 +201,21 @@ public class DataFetchService {
                     }
                 }
             }
-
+            // Success response
             JSONObject success = new JSONObject();
             success.put("Status", "Success");
             success.put("Message", "Object created successfully");
             success.put("partcontrolId", objectId);
             success.put("Name", name);
-
+            success.put("InitialState", initialState);
             return Response.ok(success.toString(), MediaType.APPLICATION_JSON).build();
-
+            
         } catch (SQLException ex) {
             ex.printStackTrace();
             resp.put("Status", "Failed").put("Message", "Internal server error: " + ex.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(resp.toString()).build();
         }
     }
-
 
     
     //updatepart
@@ -213,10 +225,7 @@ public class DataFetchService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response update(@PathParam("objectid") String objectId, String body) {
         JSONObject resp = new JSONObject();
-
-        // Define your date formatter for SQL Timestamp conversion
         SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
         try {
             JSONObject json = new JSONObject(body);
             String description = json.optString("description", "").trim();
@@ -226,10 +235,7 @@ public class DataFetchService {
                 resp.put("Status", "Failed").put("Message", "objectid and description are required.");
                 return Response.status(Response.Status.BAD_REQUEST).entity(resp.toString()).build();
             }
-
-  
             String updatedDate = sf.format(new Date());
-
             try (Connection conn = DriverManager.getConnection(url, user, db_password);
                  PreparedStatement ps = conn.prepareStatement(
                      "UPDATE amxcorepartdata SET description = ?, createddate = ? WHERE objectid = ?")) {
@@ -237,14 +243,11 @@ public class DataFetchService {
                 ps.setString(1, description);
                 ps.setTimestamp(2, Timestamp.valueOf(updatedDate));
                 ps.setString(3, objectId);
-
                 int count = ps.executeUpdate();
-
                 if (count == 0) {
                     resp.put("Status", "Failed").put("Message", "objectid not found.");
                     return Response.status(Response.Status.NOT_FOUND).entity(resp.toString()).build();
                 }
-
                 // History handling
                 String historyMsg = "Updated description at " + updatedDate;
                 try (PreparedStatement psSel = conn.prepareStatement("SELECT history FROM parthistory WHERE objectid = ?")) {
@@ -1032,5 +1035,273 @@ public class DataFetchService {
             }
         }
 
+        //update partcontrol
+        @PUT
+        @Path("/updatepartcontrol/{objectid}")
+        @Consumes(MediaType.APPLICATION_JSON)
+        @Produces(MediaType.APPLICATION_JSON)
+        public Response updatePartContol(@PathParam("objectid") String objectId, String body) {
+            JSONObject resp = new JSONObject();
+
+            SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+            try {
+                JSONObject json = new JSONObject(body);
+                String description = json.optString("description", "").trim();
+
+                // Validate input
+                if (objectId == null || objectId.trim().isEmpty() || description.isEmpty()) {
+                    resp.put("Status", "Failed").put("Message", "objectid and description are required.");
+                    return Response.status(Response.Status.BAD_REQUEST).entity(resp.toString()).build();
+                }
+
+      
+                String updatedDate = sf.format(new Date());
+
+                try (Connection conn = DriverManager.getConnection(url, user, db_password);
+                     PreparedStatement ps = conn.prepareStatement(
+                         "UPDATE amxpartcontroldata SET description = ?, createddate = ? WHERE objectid = ?")) {
+
+                    ps.setString(1, description);
+                    ps.setTimestamp(2, Timestamp.valueOf(updatedDate));
+                    ps.setString(3, objectId);
+
+                    int count = ps.executeUpdate();
+
+                    if (count == 0) {
+                        resp.put("Status", "Failed").put("Message", "objectid not found.");
+                        return Response.status(Response.Status.NOT_FOUND).entity(resp.toString()).build();
+                    }
+                    // History handling
+                    String historyMsg = "Updated description at " + updatedDate;
+                    try (PreparedStatement psSel = conn.prepareStatement("SELECT history FROM partcontrolhistory WHERE objectid = ?")) {
+                        psSel.setString(1, objectId);
+                        try (ResultSet rs = psSel.executeQuery()) {
+                            if (rs.next()) {
+                                String existing = rs.getString("history");
+                                String updated = existing + " | " + historyMsg;
+                                try (PreparedStatement psUpd = conn.prepareStatement("UPDATE partcontrolhistory SET history = ? WHERE objectid = ?")) {
+                                    psUpd.setString(1, updated);
+                                    psUpd.setString(2, objectId);
+                                    psUpd.executeUpdate();
+                                }
+                            } else {
+                                try (PreparedStatement psIns = conn.prepareStatement("INSERT INTO partcontrolhistory (objectid, history) VALUES (?, ?)")) {
+                                    psIns.setString(1, objectId);
+                                    psIns.setString(2, historyMsg);
+                                    psIns.executeUpdate();
+                                }
+                            }
+                        }
+                    }
+
+                    resp.put("Status", "Success").put("Message", "Part updated.");
+                    return Response.ok(resp.toString(), MediaType.APPLICATION_JSON).build();
+
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    resp.put("Status", "Failed").put("Message", "Database error: " + e.getMessage());
+                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(resp.toString()).build();
+                }
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                resp.put("Status", "Failed").put("Message", "Invalid input: " + ex.getMessage());
+                return Response.status(Response.Status.BAD_REQUEST).entity(resp.toString()).build();
+            }
+        }
+        
+        //amxpartspecificationdata
+        @POST
+        @Path("/createpartspecification")
+        @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+        @Produces(MediaType.APPLICATION_JSON)
+        public Response createPartSpecification(@FormParam("SuperType") String supertype,@FormParam("Type") String type,
+                @FormParam("Description") String description,@FormParam("ResponsibleEngineer") String responsibleEngineer,
+                @Context HttpServletRequest request) {
+
+            JSONObject resp = new JSONObject();
+            HttpSession session = request.getSession(false);
+            if (session == null
+                    || session.getAttribute("username") == null
+                    || session.getAttribute("emailId") == null) {
+                resp.put("Status", "Failed").put("Message", "User not logged in.");
+                return Response.status(Response.Status.UNAUTHORIZED).entity(resp.toString()).build();
+            }
+            String username = (String) session.getAttribute("username");
+            String emailId = (String) session.getAttribute("emailId");
+//            System.out.println("Session ID: " + session.getId());
+//            System.out.println("username: " + session.getAttribute("username"));
+//            System.out.println("emailId: " + session.getAttribute("emailId"));
+
+            if (supertype == null || supertype.trim().isEmpty()
+                    || type == null || type.trim().isEmpty()
+                    || description == null || description.trim().isEmpty()
+                    || responsibleEngineer == null || responsibleEngineer.trim().isEmpty()) {
+                resp.put("Status", "Failed").put("Message", "Missing required fields.");
+                return Response.status(Response.Status.BAD_REQUEST).entity(resp.toString()).build();
+            }
+
+            try (Connection conn = DriverManager.getConnection(url, user, db_password)) {
+
+                SecureRandom random = new SecureRandom();
+                byte[] bytes = new byte[8];
+                random.nextBytes(bytes);
+                StringBuilder objectIdBuilder = new StringBuilder();
+                for (int i = 0; i < bytes.length; i += 2) {
+                    int part = ((bytes[i] & 0xFF) << 8) | (bytes[i + 1] & 0xFF);
+                    objectIdBuilder.append(String.format("%04X", part));
+                    if (i < bytes.length - 2) objectIdBuilder.append(".");
+                }
+                String objectId = objectIdBuilder.toString() + ".PASP";
+                String prefix = "PASP-";
+                int maxNum = 0;
+                String selectMaxNum = "SELECT name FROM amxpartspecificationdata WHERE name LIKE ?";
+                try (PreparedStatement ps = conn.prepareStatement(selectMaxNum)) {
+                    ps.setString(1, prefix + "%");
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            String existingName = rs.getString("name");
+                            if (existingName.startsWith(prefix)) {
+                                String numPart = existingName.substring(prefix.length());
+                                try {
+                                    int num = Integer.parseInt(numPart);
+                                    if (num > maxNum) {
+                                        maxNum = num;
+                                    }
+                                } catch (NumberFormatException ignored) {
+                                }
+                            }
+                        }
+                    }
+                }
+                int nextNum = maxNum + 1;
+                String name = String.format("%s%06d", prefix, nextNum);
+                LocalDateTime now = LocalDateTime.now();
+                Timestamp timestampNow = Timestamp.valueOf(now);
+                String createdDateStr = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                String insertSQL = "INSERT INTO amxpartspecificationdata " +
+                        "(objectid, name, supertype, type, description, createdtime, modifiedtime, owner, email, connectionid) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+                try (PreparedStatement insertPS = conn.prepareStatement(insertSQL)) {
+                    insertPS.setString(1, objectId);
+                    insertPS.setString(2, name);
+                    insertPS.setString(3, supertype);
+                    insertPS.setString(4, type);
+                    insertPS.setString(5, description);
+                    insertPS.setTimestamp(6, timestampNow);
+                    insertPS.setTimestamp(7, timestampNow); 
+                    insertPS.setString(8, responsibleEngineer);
+                    insertPS.setString(9, emailId != null ? emailId : "");
+                    insertPS.setString(10, "");
+                    insertPS.executeUpdate();
+                }
+                String historyMsg = "Created by " + username + " at " + createdDateStr;
+
+                String hSelect = "SELECT history FROM partspecificationhistory WHERE objectid = ?";
+                try (PreparedStatement hSel = conn.prepareStatement(hSelect)) {
+                    hSel.setString(1, objectId);
+                    try (ResultSet hrs = hSel.executeQuery()) {
+                        if (hrs.next()) {
+                            String hist = hrs.getString("history");
+                            String combined = hist + " | " + historyMsg;
+                            String hUpdate = "UPDATE partspecificationhistory SET history = ? WHERE objectid = ?";
+                            try (PreparedStatement hUpd = conn.prepareStatement(hUpdate)) {
+                                hUpd.setString(1, combined);
+                                hUpd.setString(2, objectId);
+                                hUpd.executeUpdate();
+                            }
+                        } else {
+                            String hInsert = "INSERT INTO partspecificationhistory (objectid, history) VALUES (?, ?)";
+                            try (PreparedStatement hIns = conn.prepareStatement(hInsert)) {
+                                hIns.setString(1, objectId);
+                                hIns.setString(2, historyMsg);
+                                hIns.executeUpdate();
+                            }
+                        }
+                    }
+                }
+                JSONObject success = new JSONObject();
+                success.put("Status", "Success");
+                success.put("Message", "Object created successfully");
+                success.put("partcontrolId", objectId);
+                success.put("Name", name);
+
+                return Response.ok(success.toString(), MediaType.APPLICATION_JSON).build();
+
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                resp.put("Status", "Failed").put("Message", "Internal server error: " + ex.getMessage());
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(resp.toString()).build();
+            }
+        }
+        
+        //Lifecycle
+        @PUT
+        @Path("/updatestate/{objectId}")
+        @Produces(MediaType.APPLICATION_JSON)
+        public Response updateNextState(@PathParam("objectId") String objectId) throws SQLException {
+        	if (objectId == null || objectId.trim().isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"objectId must be provided\"}").build();
+            }
+        	try(Connection conn=DriverManager.getConnection(url, user,db_password)){
+        		String currentState = getCurrentState(conn, objectId);
+                if (currentState == null) {
+                    return Response.status(Response.Status.NOT_FOUND)
+                            .entity("{\"error\": \"Part not found for objectId: " + objectId + "\"}")
+                            .build();
+                }
+                List<String> stateSequence = getStateSequence(conn, "PartStates");
+                int index = stateSequence.indexOf(currentState);
+                if (index == -1 || index == stateSequence.size() - 1) {
+                    return Response.ok("{\"message\": \"Already in final state or state not recognized\", \"currentState\": \"" + currentState + "\"}")
+                            .build();
+                }
+                String nextState = stateSequence.get(index + 1);
+                updatePartState(conn, objectId, nextState);
+
+                return Response.ok("{\"message\": \"State updated successfully\", \"newState\": \"" + nextState + "\"}")
+                        .build();
+        	}catch (SQLException e) {
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity("{\"error\": \"Database error: " + e.getMessage() + "\"}")
+                        .build();
+            }
+        }
+        public String getCurrentState(Connection conn, String objectId) throws SQLException {
+            String query = "SELECT currentstate FROM amxcorepartdata WHERE objectid = ?";
+            try (PreparedStatement ps = conn.prepareStatement(query)) {
+                ps.setString(1, objectId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getString("currentstate");
+                    }
+                }
+            }
+            return null;
+        }
+        
+        public List<String> getStateSequence(Connection conn, String ruleName) throws SQLException {
+            String query = "SELECT rulevalue FROM amxschemarules WHERE rulename = ?";
+            try (PreparedStatement ps = conn.prepareStatement(query)) {
+                ps.setString(1, ruleName);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        String ruleValue = rs.getString("rulevalue");
+                        return Arrays.asList(ruleValue.split("\\|"));
+                    }
+                }
+            }
+            return new ArrayList<>();
+        }
+        public void updatePartState(Connection conn, String objectId, String newState) throws SQLException {
+            String updateQuery = "UPDATE amxcorepartdata SET currentstate = ? WHERE objectid = ?";
+            try (PreparedStatement ps = conn.prepareStatement(updateQuery)) {
+                ps.setString(1, newState);
+                ps.setString(2, objectId);
+                ps.executeUpdate();
+            }
+        }   
     }
 

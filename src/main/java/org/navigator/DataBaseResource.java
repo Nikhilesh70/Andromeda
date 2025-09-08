@@ -64,8 +64,6 @@ public class DataBaseResource {
                     superTypes.add(rs.getString("name"));
                 }
             }
-
-            // Add "AmxControl" at the top if missing
             if (!superTypes.contains("AmxControl")) {
                 superTypes.add(0, "AmxControl");
             }
@@ -74,11 +72,18 @@ public class DataBaseResource {
             // 2) Fetch types grouped by supertype
             Map<String, List<String>> typesMap = new HashMap<>();
             for (String superType : superTypes) {
-                if (!"AmxControl".equals(superType)) {
-                    List<String> typeNames = new ArrayList<>();
-                    String sqlType = "SELECT partname FROM type WHERE supertype_id = " +
-                            "(SELECT id FROM supertype WHERE name = ?) ORDER BY partname";
+                List<String> typeNames = new ArrayList<>();
 
+                if ("Document".equals(superType)) {
+                    String sqlDocumentTypes = "SELECT DISTINCT document FROM type WHERE document IS NOT NULL AND document <> '' ORDER BY document";
+                    try (PreparedStatement ps = conn.prepareStatement(sqlDocumentTypes);
+                         ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            typeNames.add(rs.getString("document"));
+                        }
+                    }
+                } else if (!"AmxControl".equals(superType)) {
+                    String sqlType = "SELECT partname FROM type WHERE supertype_id = (SELECT id FROM supertype WHERE name = ?) ORDER BY partname";
                     try (PreparedStatement ps = conn.prepareStatement(sqlType)) {
                         ps.setString(1, superType);
                         try (ResultSet rs = ps.executeQuery()) {
@@ -90,10 +95,11 @@ public class DataBaseResource {
                             }
                         }
                     }
-
-                    typesMap.put(superType, typeNames);
                 }
+
+                typesMap.put(superType, typeNames);
             }
+
 
             // 3) Fetch distinct amxcontrol values for "AmxControl" type
             List<String> amxControlTypes = new ArrayList<>();
