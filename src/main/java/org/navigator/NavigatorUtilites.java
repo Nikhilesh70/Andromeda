@@ -55,9 +55,8 @@ public class NavigatorUtilites {
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.APPLICATION_JSON)
     public Response createPart(@FormParam("SuperType") String supertype,@FormParam("Type") String type,@FormParam("APN") String apn,
-                               @FormParam("Description") String description,@FormParam("FastenerSubPart") String fastenerSubPart,
-                               @FormParam("Variant") String variant,@Context HttpServletRequest request) {
-
+                 @FormParam("Description") String description,@FormParam("FastenerSubPart") String fastenerSubPart,
+              @FormParam("Variant") String variant,@Context HttpServletRequest request) {
         JSONObject resp = new JSONObject();
         HttpSession session = request.getSession(false);
         String username = (session != null) ? (String) session.getAttribute("username") : null;
@@ -65,12 +64,15 @@ public class NavigatorUtilites {
             resp.put("Status", "Failed").put("Message", "User not logged in.");
             return Response.status(Response.Status.UNAUTHORIZED).entity(resp.toString()).build();
         }
+
         boolean isFastener = "Fastener".equalsIgnoreCase(type);
+
         if (supertype == null || type == null || apn == null || description == null ||
-        	    supertype.trim().isEmpty() || type.trim().isEmpty() || apn.trim().isEmpty() || description.trim().isEmpty()) {
-        	    resp.put("Status", "Failed").put("Message", "Missing required fields.");
-        	    return Response.status(Response.Status.BAD_REQUEST).entity(resp.toString()).build();
-        	}
+                supertype.trim().isEmpty() || type.trim().isEmpty() || apn.trim().isEmpty() || description.trim().isEmpty()) {
+            resp.put("Status", "Failed").put("Message", "Missing required fields.");
+            return Response.status(Response.Status.BAD_REQUEST).entity(resp.toString()).build();
+        }
+
         if (isFastener) {
             if (fastenerSubPart == null || fastenerSubPart.trim().isEmpty() || variant == null || variant.trim().isEmpty()) {
                 resp.put("Status", "Failed").put("Message", "FastenerSubPart and Variant are required when Type is Fastener.");
@@ -80,7 +82,19 @@ public class NavigatorUtilites {
             if (fastenerSubPart == null) fastenerSubPart = "";
             if (variant == null) variant = "";
         }
+
         try (Connection conn = DriverManager.getConnection(url, user, db_password)) {
+            String firstState = "InWork"; 
+            try (PreparedStatement psState = conn.prepareStatement("SELECT rulevalue FROM amxschemarules WHERE rulename = 'PartStates'")) {
+                ResultSet rsState = psState.executeQuery();
+                if (rsState.next()) {
+                    String states = rsState.getString("rulevalue");
+                    if (states != null && !states.isEmpty()) {
+                        firstState = states.split("\\|")[0]; 
+                    }
+                }
+                rsState.close();
+            }
 
             String[] apnParts = apn.split("-");
             if (apnParts.length != 2) {
@@ -89,10 +103,12 @@ public class NavigatorUtilites {
             }
             String prefix = apnParts[0];
             String suffix = apnParts[1];
+
             String query = "SELECT name FROM amxcorepartdata WHERE apn = ?";
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setString(1, apn);
             ResultSet rs = ps.executeQuery();
+
             int maxNum = 0;
             while (rs.next()) {
                 String existingName = rs.getString("name");
@@ -109,18 +125,20 @@ public class NavigatorUtilites {
 
             int newNum = maxNum + 1;
             String name = String.format("%s-%03d-%s", prefix, newNum, suffix);
+
             SecureRandom random = new SecureRandom();
             StringBuilder objectIdBuilder = new StringBuilder();
             for (int i = 0; i < 4; i++) {
                 objectIdBuilder.append(String.format("%04X", random.nextInt(0x10000)));
                 if (i < 3) objectIdBuilder.append(".");
             }
-            String objectId = objectIdBuilder.toString()+ ".APN";
-            
+            String objectId = objectIdBuilder.toString() + ".APN";
+
             String createdDate = sf.format(new java.util.Date());
 
-            String insertSQL = "INSERT INTO amxcorepartdata(objectid, apn, name, type, supertype, description, createddate, owner, email,fastenersubpart, variant,connectionid) "
-            		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?)";
+            String insertSQL = "INSERT INTO amxcorepartdata(objectid, apn, name, type, supertype, description, createddate, owner, email, fastenersubpart, variant, connectionid, currentstate) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
             try (PreparedStatement insertPS = conn.prepareStatement(insertSQL)) {
                 insertPS.setString(1, objectId);
                 insertPS.setString(2, apn);
@@ -131,11 +149,13 @@ public class NavigatorUtilites {
                 insertPS.setTimestamp(7, Timestamp.valueOf(createdDate));
                 insertPS.setString(8, username);
                 insertPS.setString(9, username + "@apn.com");
-                insertPS.setString(10, fastenerSubPart);  
-                insertPS.setString(11, variant);  
+                insertPS.setString(10, fastenerSubPart);
+                insertPS.setString(11, variant);
                 insertPS.setString(12, "");
+                insertPS.setString(13, firstState); 
                 insertPS.executeUpdate();
             }
+
             String historyMsg = "Created by " + username + " at " + createdDate;
             try (PreparedStatement hSel = conn.prepareStatement("SELECT history FROM parthistory WHERE objectid = ?")) {
                 hSel.setString(1, objectId);
@@ -156,13 +176,16 @@ public class NavigatorUtilites {
                     }
                 }
             }
+
             resp.put("Status", "Success")
-            .put("ObjectId", objectId)
-            .put("Name", name)
-            .put("CreatedDate", createdDate)
-            .put("Owner", username)
-            .put("FastenerSubPart", fastenerSubPart)
-            .put("Variant", variant);
+                    .put("ObjectId", objectId)
+                    .put("Name", name)
+                    .put("CreatedDate", createdDate)
+                    .put("Owner", username)
+                    .put("FastenerSubPart", fastenerSubPart)
+                    .put("Variant", variant)
+                    .put("CurrentState", firstState);  
+
             return Response.ok(resp.toString(), MediaType.APPLICATION_JSON).build();
 
         } catch (SQLException e) {

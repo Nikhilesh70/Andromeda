@@ -18,7 +18,6 @@
     color: #333;
   }
 
-  /* Top Bar Container */
   .topbar {
     display: flex;
     background: #f5f7fa;
@@ -28,7 +27,6 @@
     color: #333;
   }
 
-  /* Box styling */
   .topbar > div {
     display: flex;
     align-items: center;
@@ -39,12 +37,9 @@
     white-space: nowrap;
   }
 
-  /* Last box has right border */
   .topbar > div:last-child {
     border-right: 1px solid #cfd3db;
   }
-
-  /* Folder Icon Box */
   .folder-box {
     background: #e3e7eb;
     border: 1px solid #d1d6dc;
@@ -62,7 +57,6 @@
     height: 16px;
   }
 
-  /* Part Number box */
   .part-number {
     font-weight: 700;
     font-size: 14px;
@@ -71,7 +65,6 @@
     margin-right: 12px;
   }
 
-  /* Description box */
   .description {
     font-weight: 600;
     font-size: 13px;
@@ -81,7 +74,6 @@
     margin-right: 12px;
   }
 
-  /* State box */
   .state-box {
     font-weight: 600;
     font-size: 13px;
@@ -97,7 +89,6 @@
     margin-right: 4px;
   }
 
-  /* Buttons styling */
   .btn-submit {
     background-color: #5c8bff;
     border: 1px solid #3f70ff;
@@ -128,7 +119,6 @@
     background-color: #c6cad2;
   }
 
-  /* Info box */
   .info-box {
     font-size: 11px;
     color: #666;
@@ -139,27 +129,22 @@
   .info-box strong {
     color: #444;
   }
-
-  /* Adjust spacing between boxes */
   .topbar > div:not(:last-child) {
-    margin-right: -1px; /* To collapse adjacent borders */
+    margin-right: -1px; 
   }
 	
 	.vertical-line img {
-  height: 20px;  /* Adjust height to make it appear like a line */
-  width: 1px;    /* Make it thin like a vertical line */
-  margin: 0 10px; /* Space around the line */
+  height: 20px;  
+  width: 1px;  
+  margin: 0 10px;
 }
 
-  /* Container with Sidebar + Main */
   .container {
     display: flex;
-    height: calc(100vh - 56px); /* Adjust for topbar height */
+    height: calc(100vh - 56px); 
     font-size: 13px;
   }
 
-  /* Sidebar */
-  /* Sidebar styling */
 .sidebar {
   width: 16%;
   background-color: #f8f9fa;
@@ -188,7 +173,6 @@
    font-weight: bold;
 }
 
-/* Main Panel */
 .main-panel {
   flex-grow: 1;
   padding: 20px;
@@ -232,7 +216,7 @@
   }
   .toolbar i.bi-clock-history {
     color: #9370DB;
-    font-size: 24px; /* Increased the size for visibility */
+    font-size: 24px; 
     margin-right: 10px;
 }
   .toolbar button:hover {
@@ -241,7 +225,7 @@
   }
 
 table.properties {
-  width: 100%; /* full width */
+  width: 100%;
   border-collapse: collapse;
   border: 1px solid #ddd;
   font-size: 16px;
@@ -252,14 +236,14 @@ table.properties {
 table.properties th,
 table.properties td {
   padding: 12px 16px;
-  border: 1px solid #ddd; /* add borders on all cells */
+  border: 1px solid #ddd;
   vertical-align: middle;
 }
 
 table.properties th {
   background: #fafafa;
   font-weight: bold;
-  width: 200px; /* label column width */
+  width: 200px;
   text-align: left;
 }
 
@@ -360,7 +344,7 @@ table.properties th {
     <div class="state-box">
       <span class="state-label">State:</span>
       <button id="submitBtn" class="btn-submit">InWork</button>
-      <button id="evaluateBtn" class="btn-evaluate">InApproval</button>
+      <button id="evaluateBtn" class="btn-evaluate">Frozen</button>
     </div>
     <div class="vertical-line"></div>
     <div class="info-box">
@@ -371,11 +355,12 @@ table.properties th {
 </div>
 <div class="container">
   <div class="sidebar">
-    <a href="Partcontroldetails.jsp?name=<%= request.getParameter("name") %>" class="nav-link" data-page="Partcontroldetails.jsp">PC-Properties</a>
-    <a class="nav-link active" href="Partcontrolhistory.jsp?name=<%= request.getParameter("name") %>">History</a>
-     <a href="Partlifecycle.jsp?name=<%= request.getParameter("name") %>" class="nav-link" data-page="Partlifecycle.jsp">LifeCycle</a>
-    <a href="Partcontrolmanagement.jsp?name=<%= request.getParameter("name") %>" class="nav-link" data-page="Partcontrolmanagement.jsp">Part Management</a>
-  </div>
+       <a class="nav-link" href="Properties.jsp?name=<%= request.getParameter("name") %>">Part Properties</a>
+        <a class="nav-link active" href="Parthistory.jsp?name=<%= request.getParameter("name") %>">History</a>
+        <a class="nav-link" href="Lifecycle.jsp?name=<%= request.getParameter("name") %>">LifeCycle</a>
+        <a class="nav-link" href="ControlManagement.jsp?name=<%= request.getParameter("name") %>">Control Management</a>
+   		<a class="nav-link" href="PartSpecification.jsp?name=<%= request.getParameter("name") %>">PartSpecification</a>
+    </div>
 
   <div class="main-panel">
     <!-- Toolbar -->
@@ -403,68 +388,69 @@ table.properties th {
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script>
+
     let dataTable;
     function getQueryParam(param) {
         const urlParams = new URLSearchParams(window.location.search);
-        const paramValue = urlParams.get(param);
-        return paramValue;
+        return urlParams.get(param);
     }
-
-    
     function showLoading(show) {
         $('#loadingSpinner').css('display', show ? 'block' : 'none');
     }
 
-    function showError(message) {
-        $('#noHistoryMsg').text(message).show();
+    function showError(msg) {
+        $('#errorMessage').text(msg).show();
         $('#historyTable').hide();
         showLoading(false);
     }
 
+    function escapeHtml(text) {
+        return $('<div>').text(text).html();
+    }
+
     function displayHistory(historyText) {
-        if (!historyText || historyText.trim() === '') {
-            showError("No history found for this ID.");
+        console.log("Raw historyText:", historyText);
+
+        if (typeof historyText !== 'string' || historyText.trim() === '') {
+            showError("No valid history entries found.");
             return;
         }
 
         const entries = historyText.split('|').map(e => e.trim()).filter(e => e !== '');
-        console.log('Entries:', entries);  
 
         if (entries.length === 0) {
-            showError("No history found for this ID.");
+            showError("No valid history entries found.");
             return;
         }
 
         if ($.fn.DataTable.isDataTable('#historyTable')) {
             dataTable.clear().destroy();
         }
+
         $('#historyTable tbody').empty();
 
         entries.forEach(entry => {
-            $('#historyTable tbody').append('<tr><td>' + $('<div>').text(entry).html() + '</td></tr>');
+            $('#historyTable tbody').append('<tr><td>' + escapeHtml(entry) + '</td></tr>');
         });
+
         dataTable = $('#historyTable').DataTable({
             searching: false,
             paging: false,
-            ordering: true,
+            ordering: false,
             info: false,
             lengthChange: false
         });
 
-        $('#noHistoryMsg').hide();
+        $('#errorMessage').hide();
         $('#historyTable').show();
         showLoading(false);
+
+        console.log("Table displayed with entries.");
     }
 
-
     $(document).ready(function () {
-        const objectId = getQueryParam('name');  
-        if (!objectId) {
-            showError("No 'name' (ObjectId) parameter found in the URL.");
-            return;
-        }
-        const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
-        
+        const objectId = getQueryParam('name');
+		const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
         if (partInfo) {
           $('.part-number').text(partInfo.name || '');
           $('.part-type').text(partInfo.type || '');
@@ -472,41 +458,29 @@ table.properties th {
           $('.part-number').text('');
           $('.part-type').text('');
         }
+        if (!objectId) {
+            showError("No 'name' parameter found in URL.");
+            return;
+        }
 
-        showLoading(true); 
+        showLoading(true);
+
         $.ajax({
-            url: 'http://localhost:8080/andromeda/api/datafetchservice/partcontrolhistory',
+            url: 'http://localhost:8080/andromeda/api/datafetchservice/history',
             method: 'GET',
-            data: { objectId: objectId },  
+            data: { objectId: objectId },
             dataType: 'json',
-            success: function (data) {
-            	 
-                if (
-                    (data.error && data.error.toLowerCase().includes("no history")) ||
-                    (data.message && data.message.toLowerCase().includes("no history"))
-                ) {
-                    showError(data.message || data.error || "No history found for this ID.");
-                } else if (data.history) {
+            success: function(data) {
+                console.log("API response:", data);
+                if (data && data.history) {
                     displayHistory(data.history);
                 } else {
-                    showError("Unexpected response format.");
+                    showError("No history field found in API response.");
                 }
             },
-            error: function (xhr) {
-                let message = "Failed to fetch history.";
-                if (xhr.status === 404) {
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        if (response.error && response.error.toLowerCase().includes("no history")) {
-                            message = "No history found for this ID.";
-                        }
-                    } catch (e) {
-                    }
-                }
-                showError(message);
-            },
-            complete: function () {
-                showLoading(false);  
+            error: function(xhr, status, error) {
+                console.error("AJAX error:", status, error);
+                showError("Failed to fetch history data.");
             }
         });
     });

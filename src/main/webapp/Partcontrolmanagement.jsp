@@ -8,59 +8,299 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>Partcontrol Management</title>
+<meta charset="UTF-8" />
+<title>Part Management</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0; padding: 0;
+    background: #fff;
+    color: #333;
+  }
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+  /* Top Bar Container */
+  .topbar {
+    display: flex;
+    background: #f5f7fa;
+    border-bottom: 1px solid #cfd3db;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #333;
+  }
 
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+  /* Box styling */
+  .topbar > div {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: #f9fbfd;
+    border: 1px solid #cfd3db;
+    border-right: none;
+    white-space: nowrap;
+  }
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background-color: white;
-        }
-        #detailsTable {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            border: 1px solid #dee2e6;
-            padding: 12px;
-            text-align: left;
-            font-wrap-mode:nowrap;
-        }
-        th {
-            background-color: #f8f9fa;
-            width: 200px;
-            forn-wrap-mode:nowrap;
-        }
-        .error {
-            color: red;
-            margin-top: 20px;
-            text-align: center;
-            font-weight: bold;
-        }
-        #loadingSpinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 40px auto 10px auto;
-            display: none;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .nav-tabs {
+  /* Last box has right border */
+  .topbar > div:last-child {
+    border-right: 1px solid #cfd3db;
+  }
+
+  /* Folder Icon Box */
+  .folder-box {
+    background: #e3e7eb;
+    border: 1px solid #d1d6dc;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  .folder-box img {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Part Number box */
+  .part-number {
+    font-weight: 700;
+    font-size: 14px;
+    padding-right: 12px;
+    border-right: 1px solid #cfd3db;
+    margin-right: 12px;
+  }
+
+  /* Description box */
+  .description {
+    font-weight: 600;
+    font-size: 13px;
+    color: #555;
+    padding-right: 12px;
+    border-right: 1px solid #cfd3db;
+    margin-right: 12px;
+  }
+
+  /* State box */
+  .state-box {
+    font-weight: 600;
+    font-size: 13px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 12px;
+    border-right: 1px solid #cfd3db;
+  }
+
+  .state-label {
+    margin-right: 4px;
+  }
+
+  /* Buttons styling */
+  .btn-submit {
+    background-color: #5c8bff;
+    border: 1px solid #3f70ff;
+    color: white;
+    font-size: 12px;
+    padding: 4px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn-submit:hover {
+    background-color: #3f70ff;
+  }
+
+  .btn-evaluate {
+    background-color: #e5e7ea;
+    border: 1px solid #c6cad2;
+    color: #555;
+    font-size: 12px;
+    padding: 4px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn-evaluate:hover {
+    background-color: #c6cad2;
+  }
+
+  /* Info box */
+  .info-box {
+    font-size: 11px;
+    color: #666;
+    padding-left: 4px;
+    line-height: 1.3;
+  }
+
+  .info-box strong {
+    color: #444;
+  }
+
+  /* Adjust spacing between boxes */
+  .topbar > div:not(:last-child) {
+    margin-right: -1px; /* To collapse adjacent borders */
+  }
+	
+	.vertical-line img {
+  height: 20px;  /* Adjust height to make it appear like a line */
+  width: 1px;    /* Make it thin like a vertical line */
+  margin: 0 10px; /* Space around the line */
+}
+
+  .container {
+    display: flex;
+    height: calc(100vh - 56px);
+    font-size: 13px;
+  }
+.sidebar {
+  width: 16%;
+  background-color: #f8f9fa;
+  border-right: 1px solid #ddd;
+  padding: 20px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.sidebar a {
+  display: block;
+  padding: 8px;
+  color: #333;
+  text-decoration: none;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+.sidebar a:hover {
+  background-color: #e3e7ea; 
+}
+
+.sidebar a.active {
+  background-color:#808080;
+  color: white;
+   font-weight: bold;
+}
+
+/* Main Panel */
+.main-panel {
+  flex-grow: 1;
+  padding: 20px;
+  overflow-y: auto;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+
+.container {
+  display: flex;
+  height: calc(100vh - 56px); 
+}
+
+.topbar {
+  display: flex;
+  background: #f5f7fa;
+  border-bottom: 1px solid #cfd3db;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #333;
+}
+
+  .toolbar {
+    margin-bottom: 5px;
+    padding-left: 2px;
+  }
+  .toolbar button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-right: 6px;
+    vertical-align: middle;
+    padding: 2px 4px;
+  }
+  .toolbar button img {
+    vertical-align: middle;
+    width: 18px;
+    height: 18px;
+  }
+  .toolbar button:hover {
+    background-color: #e3f2fd;
+    border-radius: 2px;
+  }
+
+table.properties {
+  width: 100%; /* full width */
+  border-collapse: collapse;
+  border: 1px solid #ddd;
+  font-size: 16px;
+  font-family: Arial, sans-serif;
+  margin: 0 auto;
+}
+
+table.properties th,
+table.properties td {
+  padding: 12px 16px;
+  border: 1px solid #ddd; /* add borders on all cells */
+  vertical-align: middle;
+}
+
+table.properties th {
+  background: #fafafa;
+  font-weight: bold;
+  width: 200px; /* label column width */
+  text-align: left;
+}
+
+  .folder-icon {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+.properties-container {
+  max-height: 600px; 
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  margin-top: 0;
+}
+
+  /* Loading Spinner */
+  #loadingSpinner {
+    display: none;
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    font-size: 14px;
+    color: #666;
+  }
+
+  
+  #errorMessage {
+    display: none;
+    color: red;
+    margin: 10px 0;
+    font-weight: bold;
+  }
+#detailsTable {
+   width: 100%;
+   border-collapse: collapse;
+   margin-top: 10px;
+}
+th, td {
+   border: 1px solid #dee2e6;
+   padding: 12px;
+   text-align: left;
+   font-wrap-mode:nowrap;
+}
+th {
+background-color: #f8f9fa;
+width: 200px;
+forn-wrap-mode:nowrap;
+}
+.nav-tabs {
             margin-bottom: 20px;
         }
         .nav-tabs .nav-link.active {
@@ -77,7 +317,7 @@
             border-radius: 4px;
             margin-top: 10px;
         }
-        #createPanel {
+         #createPanel {
             position: fixed;
             top: 0;
             right: -400px;
@@ -87,7 +327,7 @@
             box-shadow: -2px 0 5px rgba(0,0,0,0.3);
             overflow-y: auto;
             transition: right 0.3s ease;
-            z-index: 1050;
+            z-index: 1051;
             padding: 0;
         }
         #createPanel.active {
@@ -98,50 +338,67 @@
             width: 100%;
             height: calc(100% - 56px);
         }
-    </style>
-
-    <script>
-        var loggedInUserAccess = '<%= userAccess.trim() %>';
-    </script>
-
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <!-- Bootstrap Bundle JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- DataTables JS -->
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-
+</style>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
 </head>
-<body class="container mt-4">
-    <ul class="nav nav-tabs">
-        <li class="nav-item"><a class="nav-link" href="Partcontroldetails.jsp?name=<%= request.getParameter("name") %>">PC-Properties</a></li>
-        <li class="nav-item"><a class="nav-link" href="Partcontrolhistory.jsp?name=<%= request.getParameter("name") %>">History</a></li>
-        <li class="nav-item"><a class="nav-link" href="Partlifecycle.jsp?name=<%= request.getParameter("name") %>">LifeCycle</a></li>
-        <li class="nav-item"><a class="nav-link active" href="Partcontrolmanagement.jsp?name=<%= request.getParameter("name") %>">Part Management</a></li>
-    </ul>
-	 <div class="toolbar mt-2">
-        <button class="btn btn-light" data-bs-toggle="tooltip" title="Create Part Control" id="openCreatePanelBtn">
-            <i class="bi bi-asterisk fs-6" style="color: #9370DB;"></i>
-        </button>
-        <button class="btn btn-light" data-bs-toggle="tooltip" title="Add Existing Part" id="addExistingpart">
-       <img src="https://img.icons8.com/?size=100&id=K0l4dwcsMaJa&format=png&color=000000" alt="Add" style="width: 20px; height: 20px;">
-    </button>
+<body>
+
+<div class="topbar">
+    <div class="left-section">
+        <div class="image-box">
+            <img src="https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000" alt="Folder Icon" />
+        </div>
+        <div class="part-info">
+            <div class="part-number" style="font-weight: 700; font-size: 14px;"></div>
+            <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px;"></div>
+        </div>
+        <div class="vertical-line"></div>
     </div>
-    
-    <!-- Loading Spinner -->
-    <div id="loadingSpinner"></div>
-    <div id="errorMessage" class="error" style="display:none;"></div>
-    
-     <table class="table table-bordered mt-2" id="partControlTable">
+    <div class="right-section">
+        <div class="state-box">
+            <span class="state-label">State:</span>
+            <button id="submitBtn" class="btn-submit">InWork</button>
+            <button id="evaluateBtn" class="btn-evaluate">InApproval</button>
+        </div>
+        <div class="vertical-line"></div>
+        <div class="info-box"></div>
+        <div class="vertical-line"></div>
+    </div>
+</div>
+<div class="container">
+    <div class="sidebar">
+        <a href="Partcontroldetails.jsp?name=<%= request.getParameter("name") %>" class="nav-link" data-page="Partcontroldetails.jsp">PC-Properties</a>
+        <a class="nav-link" href="Partcontrolhistory.jsp?name=<%= request.getParameter("name") %>">History</a>
+        <a href="Partlifecycle.jsp?name=<%= request.getParameter("name") %>" class="nav-link" data-page="Partlifecycle.jsp">LifeCycle</a>
+        <a href="Partcontrolmanagement.jsp?name=<%= request.getParameter("name") %>" class="nav-link active" data-page="Partcontrolmanagement.jsp">Part Management</a>
+    </div>
+    <div class="main-panel">
+        <div class="toolbar mt-2">
+            <button class="btn btn-light" data-bs-toggle="tooltip" title="Create Part Control" id="openCreatePanelBtn">
+               <i class="bi bi-asterisk fs-6" style="color: #9370DB; font-size: 16px;"></i>
+            </button>
+            <button class="btn btn-light" data-bs-toggle="tooltip" title="Add Existing Part" id="addExistingpart">
+                <img src="https://img.icons8.com/?size=100&id=K0l4dwcsMaJa&format=png&color=000000" alt="Add" style="width: 20px; height: 20px;">
+            </button>
+        </div>
+        <div id="loadingSpinner"></div>
+        <div id="errorMessage" class="error"></div>
+        <table id="detailsTable" class="properties"></table>
+    </div>
+    <table class="table table-bordered mt-2" id="partControlTable">
         <thead></thead>
         <tbody></tbody>
     </table>
+
     <div id="createPanel">
         <iframe id="createIframe" src=""></iframe>
     </div>
-
+</div>
 <script>
-
 function receiveSelectedParts(selectedParts) {
     if (!selectedParts || selectedParts.length === 0) {
         console.log("No parts selected.");
@@ -226,7 +483,15 @@ function loadPartControlTable() {
 
     $(document).ready(function() {
         loadPartControlTable();
-
+	const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
+        
+        if (partInfo) {
+          $('.part-number').text(partInfo.name || 'N/A');
+          $('.part-type').text(partInfo.type || 'N/A');
+        } else {
+          $('.part-number').text('N/A');
+          $('.part-type').text('N/A');
+        }
         document.getElementById('openCreatePanelBtn').addEventListener('click', function () {
             const urlParams = new URLSearchParams(window.location.search);
             const objectid = urlParams.get('name');
@@ -239,6 +504,7 @@ function loadPartControlTable() {
                 alert('No object ID found!');
             }
         });
+
     });
     
     $('#addExistingpart').on('click', function () {
@@ -274,7 +540,6 @@ function loadPartControlTable() {
   	    refreshPartControlList(); 
   	  }
   	});
-
 </script>
 </body>
 </html>

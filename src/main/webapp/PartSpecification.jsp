@@ -380,8 +380,8 @@ forn-wrap-mode:nowrap;
        <a class="nav-link" href="Properties.jsp?name=<%= request.getParameter("name") %>">Part Properties</a>
         <a class="nav-link" href="Parthistory.jsp?name=<%= request.getParameter("name") %>">History</a>
         <a class="nav-link" href="Lifecycle.jsp?name=<%= request.getParameter("name") %>">LifeCycle</a>
-        <a class="nav-link active" href="ControlManagement.jsp?name=<%= request.getParameter("name") %>">Control Management</a>
-   		<a class="nav-link" href="PartSpecification.jsp?name=<%= request.getParameter("name") %>">PartSpecification</a>
+        <a class="nav-link" href="ControlManagement.jsp?name=<%= request.getParameter("name") %>">Control Management</a>
+   		<a class="nav-link active" href="PartSpecification.jsp?name=<%= request.getParameter("name") %>">PartSpecification</a>
     </div>
    <div class="main-panel">
     <div class="toolbar mt-2">
@@ -405,6 +405,7 @@ forn-wrap-mode:nowrap;
     </div>
 </div>
 <script>
+
 function receiveSelectedParts(selectedParts) {
     if (!selectedParts || selectedParts.length === 0) {
         console.log("No parts selected.");
@@ -438,76 +439,10 @@ function loadPartControlTable() {
         $('#errorMessage').text('Missing object ID.');
         return;
     }
-
-    $.ajax({
-        url: 'http://localhost:8080/andromeda/api/datafetchservice/getcreatedpartcontrol',
-        data: { objectid: objectid },
-        dataType: 'json',
-        cache: false,
-        success: function(data) {
-            $('#errorMessage').text('');
-
-            if (!data || data.length === 0 || data.message) {
-                $('#errorMessage').text(data.message || 'No part controls found.');
-                if ($.fn.DataTable.isDataTable('#partControlTable')) {
-                    $('#partControlTable').DataTable().clear().draw();
-                }
-                return;
-            }
-            const filteredData = data.filter(item => item.currentstate !== undefined && item.currentstate !== null);
-            filteredData.forEach(item => {
-                if (!item.currentstate || item.currentstate.trim() === '') {
-                    item.currentstate = 'NA';
-                }
-            });
-            if (filteredData.length === 0) {
-                $('#errorMessage').text('No parts with current state found.');
-                if ($.fn.DataTable.isDataTable('#partControlTable')) {
-                    $('#partControlTable').DataTable().clear().draw();
-                }
-                return;
-            }
-
-            const keys = Object.keys(filteredData[0]);
-            const excludeKeys = ['objectid', 'connectionid', 'linkedobjectid', 'fts_document'];
-            const finalKeys = keys.filter(k => !excludeKeys.includes(k));
-
-            const columns = finalKeys.map(key => ({
-                data: key,
-                title: key.charAt(0).toUpperCase() + key.slice(1)
-            }));
-
-            if ($.fn.DataTable.isDataTable('#partControlTable')) {
-                $('#partControlTable').DataTable().destroy();
-                $('#partControlTable thead').empty(); 
-            }
-            const thead = $('#partControlTable thead');
-            const headerRow = $('<tr></tr>');
-            columns.forEach(col => {
-                headerRow.append(`<th>${col.title}</th>`);
-            });
-            thead.append(headerRow);
-            $('#partControlTable').DataTable({
-                data: filteredData,
-                columns: columns,
-                order: [[ columns.findIndex(c => c.data === 'createddate') || 0, 'desc' ]],
-                paging: false,
-                searching: false,
-                scrollX: true,
-                info: false,
-                destroy: true
-            });
-        },
-
-        error: function() {
-            $('#errorMessage').text('Failed to load part controls.');
-        }
-    });
 }
-
     $(document).ready(function() {
         loadPartControlTable();
-		const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
+        const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
         if (partInfo) {
           $('.part-number').text(partInfo.name || '');
           $('.part-type').text(partInfo.type || '');
@@ -515,7 +450,6 @@ function loadPartControlTable() {
           $('.part-number').text('');
           $('.part-type').text('');
         }
-
         document.getElementById('openCreatePanelBtn').addEventListener('click', function () {
             const urlParams = new URLSearchParams(window.location.search);
             const objectid = urlParams.get('name');

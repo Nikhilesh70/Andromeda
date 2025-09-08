@@ -28,7 +28,7 @@ public class DataFetchAMD {
         String createTableSQL = """
             CREATE TABLE IF NOT EXISTS amxcorepartdata (objectid VARCHAR(255) PRIMARY KEY,apn VARCHAR(255),name VARCHAR(255),
                 type VARCHAR(100),supertype VARCHAR(100),description TEXT,createddate TIMESTAMP,
-                owner VARCHAR(100),email VARCHAR(255),fts_document VARCHAR(500), fastenersubpart VARCHAR(225), variant VARCHAR(225),connectionid VARCHAR(255);""";
+                owner VARCHAR(100),email VARCHAR(255),fts_document VARCHAR(500), fastenersubpart VARCHAR(225), variant VARCHAR(225),connectionid VARCHAR(255),currentstate VARCHAR(255);""";
 
         String createHistoryTableSQL = """
             CREATE TABLE IF NOT EXISTS parthistory (objectid VARCHAR(255) PRIMARY KEY,history TEXT);""";
@@ -54,7 +54,7 @@ public class DataFetchAMD {
 
     // Create a new object in the database
     public void createObject(Map<String, String> sobjectmp) {
-        String insertQuery = "INSERT INTO " + table + " (objectid, apn, name, type, supertype, description, createddate, owner, email,fts_document,fastenersubpart,variant,connectionid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)";
+        String insertQuery = "INSERT INTO " + table + " (objectid, apn, name, type, supertype, description, createddate, owner, email,fts_document,fastenersubpart,variant,connectionid,currentstate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?)";
 
         try (Connection conn = DriverManager.getConnection(url, user, db_password);
              PreparedStatement pstmt = conn.prepareStatement(insertQuery)) {
@@ -72,7 +72,8 @@ public class DataFetchAMD {
             pstmt.setString(11, sobjectmp.get("fastenersubpart"));
             pstmt.setString(12, sobjectmp.get("variant"));
             pstmt.setString(13, sobjectmp.get("connectionid"));
-            System.out.println("Connection ID: " + sobjectmp.get("connectionid"));
+            pstmt.setString(14,sobjectmp.get("currentstate"));
+            //System.out.println("Connection ID: " + sobjectmp.get("connectionid"));
 
 
             int rows = pstmt.executeUpdate();
