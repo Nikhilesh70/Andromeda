@@ -354,16 +354,16 @@ forn-wrap-mode:nowrap;
 <body>
 
 <div class="topbar">
-    <div class="left-section">
-        <div class="image-box">
-            <img src="https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000" alt="Folder Icon" />
-        </div>
-        <div class="part-info">
-            <div class="part-number" style="font-weight: 700; font-size: 14px;"></div>
-            <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px;"></div>
-        </div>
-        <div class="vertical-line"></div>
+     <div class="left-section">
+    <div class="image-box">
+            <img id="typeIcon" src="" alt="Type Icon" />
+      </div>
+    <div class="part-info">
+      <div class="part-number" style="font-weight: 700; font-size: 14px;"></div>
+      <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px;"></div>
     </div>
+    <div class="vertical-line"></div>
+  </div>
     <div class="right-section">
         <div class="state-box">
             <span class="state-label">State:</span>
@@ -508,13 +508,26 @@ function loadPartControlTable() {
     $(document).ready(function() {
         loadPartControlTable();
 		const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
-        if (partInfo) {
-          $('.part-number').text(partInfo.name || '');
-          $('.part-type').text(partInfo.type || '');
-        } else {
-          $('.part-number').text('');
-          $('.part-type').text('');
-        }
+		 if (partInfo) {
+	            $('.part-number').text(partInfo.name || '');
+	            $('.part-type').text(partInfo.type || '');
+	            const icon = (partInfo.type && partInfo.type.toLowerCase() === 'fastener') 
+	                ? 'https://img.icons8.com/?size=50&id=20544&format=png&color=000000' 
+	                : 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000';
+	            $('#typeIcon').attr('src', icon);
+	            $('.state-box .state-label').remove();
+	            if (partInfo.state) {
+	                $('<span>')
+	                    .addClass('state-label')
+	                    .text('State: ' + partInfo.state)
+	                    .prependTo('.state-box');
+	            }
+	        } else {
+	            $('.part-number').text('');
+	            $('.part-type').text('');
+	            $('#typeIcon').attr('src', 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000');
+	            $('.state-box .state-label').remove();
+	        }
 
         document.getElementById('openCreatePanelBtn').addEventListener('click', function () {
             const urlParams = new URLSearchParams(window.location.search);
