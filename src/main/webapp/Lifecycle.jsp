@@ -352,6 +352,51 @@ table.properties th {
   margin-right: 8px;
   vertical-align: middle;
 }  
+.lifecycle-flow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 30px 0 20px 0;
+  padding: 0 10px;
+  flex-wrap: wrap;
+}
+
+.state-node {
+  padding: 12px 20px;
+  background-color: #5bc0de; /* default color */
+  color: white;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 14px;
+  text-align: center;
+  min-width: 100px;
+  transition: background 0.3s ease;
+}
+
+.state-node#stateFrozen { background-color: #6c757d; }
+.state-node#stateApproved { background-color: #28a745; }
+.state-node#stateReleased { background-color: #ffc107; color: #000; }
+
+.arrow {
+  margin: 0 15px;
+  font-size: 24px;
+  color: #999;
+}
+
+/* Highlight current state */
+.state-node.active {
+  border: 3px solid #444;
+  box-shadow: 0 0 8px rgba(0,0,0,0.3);
+}
+@keyframes arrowPulse {
+  0% { color: #999; transform: scale(1); }
+  50% { color: #007bff; transform: scale(1.5); }
+  100% { color: #999; transform: scale(1); }
+}
+
+.arrow.animate {
+  animation: arrowPulse 0.8s ease-in-out;
+}
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
@@ -359,12 +404,12 @@ table.properties th {
 <div class="topbar">
   <div class="left-section">
     <div class="image-box">
-      <img src="https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000" alt="Folder Icon" />
+            <img id="typeIcon" src="" alt="Type Icon" />
+      </div>
+    <div class="part-info">
+      <div class="part-number" style="font-weight: 700; font-size: 14px;"></div>
+      <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px;"></div>
     </div>
-<div class="part-info">
-            <div class="part-number" style="font-weight: 700; font-size: 14px;"></div>
-            <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px;"></div>
-        </div>
     <div class="vertical-line"></div>
   </div>
   <div class="right-section">
@@ -394,12 +439,17 @@ table.properties th {
   		<img src="lifecycle.gif" alt="Lifecycle Icon" class="lifecycle-icon" />
   		<h4>Life Cycle</h4>
 	</div>
-    <div class="d-flex flex-wrap mt-3">
-        <div id="inWorkLabel" class="state-label">InWork</div>
-        <div id="frozenLabel" class="state-label">Frozen</div>
-        <div id="approvedLabel" class="state-label">Approved</div>
-        <div id="releasedLabel" class="state-label">Released</div>
-    </div>
+    <!-- LifeCycle Flow -->
+<div class="lifecycle-flow">
+  <div class="state-node" id="stateInWork" data-state="InWork" title="Click to change to 'In Work'">In Work</div>
+  <div class="arrow" id="arrow-InWork-Frozen">➝</div>
+  <div class="state-node" id="stateFrozen" data-state="Frozen" title="Click to change to 'Frozen'">Frozen</div>
+  <div class="arrow" id="arrow-Frozen-Approved">➝</div>
+  <div class="state-node" id="stateApproved" data-state="Approved" title="Click to change to 'Approved'">Approved</div>
+  <div class="arrow" id="arrow-Approved-Released">➝</div>
+  <div class="state-node" id="stateReleased" data-state="Released" title="Click to change to 'Released'">Released</div>
+</div>
+
         <div id="stateMessages"></div>
     <div id="loadingSpinner"></div>
     <div id="errorMessage"></div>
@@ -429,32 +479,6 @@ function setLoading(loading) {
         $("#nextStateBtn").prop("disabled", false);
     }
 }
-
-function fetchCurrentState(objectId) {
-    setLoading(true);
-    $.ajax({
-    	url: 'http://localhost:8080/andromeda/api/datafetchservice/updatestate/' + objectId,
-        type: 'PUT',
-        contentType: "application/json",
-        success: function(response) {
-            setLoading(false);
-            if(response.newState) {
-                $("#currentState").text(response.newState);
-                showMessage("State updated to " + response.newState);
-            } else if(response.currentState) {
-                $("#currentState").text(response.currentState);
-            }
-        },
-        error: function(xhr) {
-            setLoading(false);
-            if(xhr.status === 404) {
-                $("#errorMessage").text("Part not found with objectId: " + objectId);
-            } else {
-                $("#errorMessage").text("Error updating state: " + xhr.responseText);
-            }
-        }
-    });
-}
 function fetchStateOnly(objectId) {
     setLoading(true);
     $.ajax({
@@ -465,6 +489,7 @@ function fetchStateOnly(objectId) {
             setLoading(false);
             if(response.currentState) {
                 $("#currentState").text(response.currentState);
+                highlightCurrentState(response.currentState); 
             } else {
                 $("#currentState").text("Unknown");
             }
@@ -479,13 +504,28 @@ function fetchStateOnly(objectId) {
 $(document).ready(function() {
     const objectId = getQueryParam("name");
 	const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
-    if (partInfo) {
-      $('.part-number').text(partInfo.name || 'N/A');
-      $('.part-type').text(partInfo.type || 'N/A');
-    } else {
-      $('.part-number').text('N/A');
-      $('.part-type').text('N/A');
-    }
+	 if (partInfo) {
+         $('.part-number').text(partInfo.name || '');
+         $('.part-type').text(partInfo.type || '');
+         const icon = (partInfo.type && partInfo.type.toLowerCase() === 'fastener') 
+             ? 'https://img.icons8.com/?size=50&id=20544&format=png&color=000000' 
+             : 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000';
+
+         $('#typeIcon').attr('src', icon);
+
+         $('.state-box .state-label').remove();
+         if (partInfo.state) {
+             $('<span>')
+                 .addClass('state-label')
+                 .text('State: ' + partInfo.state)
+                 .prependTo('.state-box');
+         }
+     } else {
+         $('.part-number').text('');
+         $('.part-type').text('');
+         $('#typeIcon').attr('src', 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000');
+         $('.state-box .state-label').remove();
+     }
     if (!objectId) {
         $("#errorMessage").text("No objectId provided in URL");
         $("#nextStateBtn").prop("disabled", true);
@@ -495,6 +535,39 @@ $(document).ready(function() {
     $("#currentState").text("Loading...");
     setLoading(false);
 
+    function highlightCurrentState(state) {
+    	  $('.state-node').removeClass('active');
+    	  $('.state-node').each(function () {
+    	    if ($(this).data('state').toLowerCase() === state.toLowerCase()) {
+    	      $(this).addClass('active');
+    	    }
+    	  });
+    	}
+    
+    $('.state-node').on('click', function () {
+        const selectedState = $(this).data('state');
+        const objectId = getQueryParam("name");
+
+        if (!objectId || !selectedState) return;
+
+        setLoading(true);
+
+        $.ajax({
+            url: 'http://localhost:8080/andromeda/api/datafetchservice/updatestate/' + objectId,
+            type: 'PUT',
+            contentType: "application/json",
+            data: JSON.stringify({ state: selectedState }),
+            success: function(response) {
+                setLoading(false);
+                highlightCurrentState(selectedState);
+                showMessage("State successfully changed to " + selectedState);
+            },
+            error: function(xhr) {
+                setLoading(false);
+                $("#errorMessage").text("Failed to change state: " + xhr.responseText);
+            }
+        });
+    });
     $("#nextStateBtn").on("click", function() {
         setLoading(true);
         $.ajax({
@@ -503,10 +576,11 @@ $(document).ready(function() {
             contentType: "application/json",
             success: function(response) {
                 setLoading(false);
-                if(response.newState) {
+                if (response.newState) {
                     $("#currentState").text(response.newState);
+                    highlightCurrentState(response.newState);
                     showMessage("State updated to " + response.newState);
-                } else if(response.message) {
+                } else if (response.message) {
                     showMessage(response.message);
                 } else {
                     showMessage("State updated");

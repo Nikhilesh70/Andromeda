@@ -211,8 +211,8 @@
   }
   .toolbar button img {
     vertical-align: middle;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
   }
   .toolbar button:hover {
     background-color: #e3f2fd;
@@ -378,11 +378,11 @@ table.properties th {
   <div class="main-panel">
     <div class="toolbar">
       <button id="editBtn" title="Edit">
-        <img src="https://img.icons8.com/ios-glyphs/30/000000/pencil--v1.png" alt="Edit" />
+        <img src="edit.gif" alt="Edit" />
       </button>
       <button title="History"></button>
       <button id="refreshBtn" title="Refresh">
-        <img src="https://img.icons8.com/ios-glyphs/30/000000/refresh.png" alt="Refresh" />
+        <img src="icons8-refresh.gif" alt="Refresh" />
       </button>
     </div>
 

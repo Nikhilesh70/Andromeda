@@ -9,7 +9,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Part Control Details</title>
+<title>Properties</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -194,6 +194,7 @@
   .toolbar {
     margin-bottom: 5px;
     padding-left: 2px;
+    margin-top:-5px;
   }
   .toolbar button {
     background: none;
@@ -205,8 +206,8 @@
   }
   .toolbar button img {
     vertical-align: middle;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
   }
   .toolbar button:hover {
     background-color: #e3f2fd;
@@ -273,7 +274,8 @@ table.properties th {
   top: 60px;
   right: 20px;
   width: 320px;
-  max-height: 80vh;         
+  max-height: 80vh; 
+  overflow-y: auto;         
   background: #f9fbfd;
   border: 1px solid #cfd3db;
   padding: 15px 15px 50px 15px; 
@@ -328,6 +330,12 @@ table.properties th {
   #cancelBtn:hover {
     background-color: #c6cad2;
   }
+  #typeIcon {
+  width: 50px;
+  height: 50px;
+  object-fit: contain; 
+}
+  
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
@@ -337,8 +345,9 @@ table.properties th {
 
   <div class="left-section">
     <div class="image-box">
-      <img src="https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000" alt="Folder Icon" />
-    </div>
+            <img id="typeIcon" src="" alt="Type Icon" />
+      </div>
+
     <div class="part-info">
       <div class="part-number" style="font-weight: 700; font-size: 14px;"></div>
       <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px;"></div>
@@ -368,9 +377,9 @@ table.properties th {
 </div>
 
   <div class="main-panel">
-    <div class="toolbar">
+       <div class="toolbar">
       <button id="editBtn" title="Edit">
-        <img src="https://img.icons8.com/ios-glyphs/30/000000/pencil--v1.png" alt="Edit" />
+        <img src="https://img.icons8.com/?size=100&id=43068&format=png&color=000000" alt="Edit" />
       </button>
       <button title="History"></button>
       <button id="refreshBtn" title="Refresh">
@@ -396,235 +405,254 @@ table.properties th {
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
- <script>
-        let currentPartData = {};
 
-        $(document).ready(function () {
-            const objectId = getQueryParam('name');
-            if (!objectId) {
-                showError("No 'name' (ObjectId) parameter found in the URL.");
+<script>
+    const loggedInUserAccess = "<%= userAccess %>";
+</script>
+<script>
+let currentPartData = {};
+
+$(document).ready(function () {
+    const objectId = getQueryParam('name');
+    if (!objectId) {
+        showError("No 'name' (ObjectId) parameter found in the URL.");
+        return;
+    }
+
+    showLoading(true);
+
+    $.ajax({
+        url: 'http://localhost:8080/andromeda/api/datafetchservice/infos',
+        method: 'GET',
+        data: { objectId },
+        dataType: 'json',
+        success: function (data) {
+            if (!data || $.isEmptyObject(data)) {
+                showError("No details found for ObjectId: " + objectId);
                 return;
             }
-
-            showLoading(true);
-
-            $.ajax({
-                url: 'http://localhost:8080/andromeda/api/datafetchservice/infos',
-                method: 'GET',
-                data: { objectId },
-                dataType: 'json',
-                success: function (data) {
-                    if (!data || $.isEmptyObject(data)) {
-                        showError("No details found for ObjectId: " + objectId);
-                        return;
-                    }
-                    currentPartData = data;
-                    sessionStorage.setItem('partInfo', JSON.stringify(data));
-                    populateTopBar(data);
-                    populateTable(data);
-                    
-                    if (loggedInUserAccess.toLowerCase() === 'admin' || loggedInUserAccess.toLowerCase() === 'leader') {
-                        $('#editBtn').show();
-                    }
-                },
-                error: function () {
-                    showError("Error fetching part details.");
-                },
-                complete: function () {
-                    showLoading(false);
-                }
-            });
-
-            $('#editBtn').on('click', function () {
-                if (!$.isEmptyObject(currentPartData)) {
-                    openEditPanel(currentPartData);
-                } else {
-                    alert("Data not loaded yet.");
-                }
-            });
-
-            $('#cancelBtn').on('click', closeEditPanel);
-
-            $('#saveBtn').on('click', function () {
-                const objectId = getQueryParam('name');
-                const descriptionValue = $('[name="description"]').val();  
-
-                if (!descriptionValue || descriptionValue.trim() === '') {
-                    alert("Description cannot be empty.");
-                    return;
-                }
-
-                const updatedData = {
-                    "description": descriptionValue
-                };
-
-                $.ajax({
-                    url: 'http://localhost:8080/andromeda/api/datafetchservice/updatepart/' + encodeURIComponent(objectId),
-                    method: 'PUT',
-                    contentType: 'application/json',
-                    data: JSON.stringify(updatedData),
-                    success: function () {
-                        alert("Part updated successfully!");
-                        location.reload();
-                    },
-                    error: function (xhr) {
-                        let msg = "Failed to update part.";
-                        try {
-                            const errResp = JSON.parse(xhr.responseText);
-                            if (errResp.Message) msg = errResp.Message;
-                        } catch (e) {}
-                        alert(msg);
-                    }
-                });
-
-                closeEditPanel();
-            });
-
-            $('#refreshBtn').on('click', function () {
-                location.reload();
-            });
-        });
-        function populateTopBar(data) {
-            $('.part-number').text(data.name || 'N/A');
-            $('.part-type').text(data.type || 'N/A');
-            $('.part-owner').text(data.owner || 'N/A');
-            $('.part-created').text(data.createddate || 'N/A');
-
-          
-            if (data.state) {
-              $('<span>')
-                .addClass('state-label')
-                .text('State: ' + data.state)
-                .prependTo('.state-box');
+            currentPartData = data;
+            sessionStorage.setItem('partInfo', JSON.stringify(data));
+            populateTopBar(data);
+            populateTable(data);
+            if (loggedInUserAccess.toLowerCase() === 'admin' || loggedInUserAccess.toLowerCase() === 'leader') {
+                $('#editBtn').show();
             }
-          }
-
-        function populateTable(part) {
-            const table = $('#detailsTable');
-            table.empty();
-            $('#errorMessage').hide();
-            $('#detailsTable').show();
-            if (part.name) {
-                const nameRow = $('<tr>');
-                nameRow.append($('<th>').text("Name"));
-                nameRow.append($('<td>').text(part.name ?? ''));
-                table.append(nameRow);
-            }
-
-            if (part.type && part.type.toLowerCase() === "fastener") {
-              
-                if (part.fastenerSubpart) {
-                    const fastenerSubpartRow = $('<tr>');
-                    fastenerSubpartRow.append($('<th>').text("Fastener Subpart"));
-                    fastenerSubpartRow.append($('<td>').text(part.fastenerSubpart ?? 'N/A'));
-                    table.append(fastenerSubpartRow);
-                }
-
-                if (part.variant) {
-                    const variantRow = $('<tr>');
-                    variantRow.append($('<th>').text("Variant"));
-                    variantRow.append($('<td>').text(part.variant ?? 'N/A'));
-                    table.append(variantRow);
-                }
-            }
-
-            for (const key in part) {
-                if (key === 'fts_document' || key === 'objectid' || key === 'historyList' || key === 'fastenersubpart' || key === 'variant'|| key==='connectionid' || key==='name') {
-                    continue;
-                }
-                if (key.toLowerCase() === 'currentstate' && (!part[key] || part[key].trim() === '')) {
-                    continue;
-                }
-                const row = $('<tr>');
-                row.append($('<th>').text(prettyLabel(key.toLowerCase())));
-                row.append($('<td>').text(part[key] ?? 'N/A'));
-                table.append(row);
-            }
-        }
-        function openEditPanel(part) {
-            console.log("Opening edit panel with data:", part);
-
-            const form = $('#editForm');
-            form.empty();
-
-            const editableFields = ['description']; 
-
-            for (const key in part) {
-                if (!part.hasOwnProperty(key)) continue;
-                if (key === 'objectid' || key === 'historyList' || key === 'fts_document' || key === 'fastenersubpart' || key === 'connectionid') continue;
-
-                if (key.toLowerCase() === 'currentstate' && (!part[key] || part[key].trim() === '')) {
-                    continue;
-                }
-
-                const rawValue = part[key] ?? '';
-                const safeId = 'edit_' + key.replace(/[^a-zA-Z0-9]/g, '_');
-                const lowerKey = key.toLowerCase();
-                const label = prettyLabel(lowerKey);
-
-                const isEditable = editableFields.includes(lowerKey);
-
-                console.log(`Adding field: ${key} (label: ${label}), editable: ${isEditable}`);
-
-                const formGroup = $('<div class="mb-3"></div>');
-
-                const labelEl = $('<label></label>')
-                    .addClass('form-label')
-                    .attr('for', safeId)
-                    .text(label);
-
-                const inputEl = $('<input>')
-                    .attr('type', 'text')
-                    .addClass('form-control')
-                    .attr('id', safeId)
-                    .attr('name', lowerKey)
-                    .val(rawValue);
-
-                if (!isEditable) {
-                    inputEl.attr('readonly', true);
-                }
-
-                formGroup.append(labelEl);
-                formGroup.append(inputEl);
-                form.append(formGroup);
-            }
-
-            $('#editPanel').addClass('active');
-        }
-
-        function closeEditPanel() {
-            $('#editPanel').removeClass('active');
-        }
-
-        function getQueryParam(param) {
-            return new URLSearchParams(window.location.search).get(param);
-        }
-
-        function showLoading(show) {
-            $('#loadingSpinner').css('display', show ? 'block' : 'none');
-        }
-
-        function showError(msg) {
-            $('#errorMessage').text(msg).show();
-            $('#detailsTable').hide();
+        },
+        error: function () {
+            showError("Error fetching part details.");
+        },
+        complete: function () {
             showLoading(false);
         }
+    });
 
-        function prettyLabel(key) {
-            const map = {
-                description: "Description",
-                supertype: "Supertype",
-                type: "Type",
-                owner: "Owner",
-                createddate: "Created Date",
-                modifieddate: "Modified Date",
-                status: "Status",
-                version: "Version"
-                
-            };
-            return map[key] || key;
+    $('#editBtn').on('click', function () {
+        if (!$.isEmptyObject(currentPartData)) {
+            openEditPanel(currentPartData);
+        } else {
+            alert("Data not loaded yet.");
+        }
+    });
+
+    $('#cancelBtn').on('click', closeEditPanel);
+
+    $('#saveBtn').on('click', function () {
+        const objectId = getQueryParam('name');
+        const descriptionValue = $('[name="description"]').val();  
+
+        if (!descriptionValue || descriptionValue.trim() === '') {
+            alert("Description cannot be empty.");
+            return;
         }
 
-    </script>
+        const updatedData = {
+            "description": descriptionValue
+        };
+
+        $.ajax({
+            url: 'http://localhost:8080/andromeda/api/datafetchservice/updatepart/' + encodeURIComponent(objectId),
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(updatedData),
+            success: function () {
+                alert("Part updated successfully!");
+                location.reload();
+            },
+            error: function (xhr) {
+                let msg = "Failed to update part.";
+                try {
+                    const errResp = JSON.parse(xhr.responseText);
+                    if (errResp.Message) msg = errResp.Message;
+                } catch (e) {}
+                alert(msg);
+            }
+        });
+
+        closeEditPanel();
+    });
+
+    $('#refreshBtn').on('click', function () {
+        location.reload();
+    });
+});
+
+function populateTopBar(data) {
+    if (!data) return;
+
+    $('.part-number').text(data.name || '');
+    $('.part-type').text(data.type || '');
+    $('.part-owner').text(data.owner || '');
+    $('.part-created').text(data.createddate || '');
+
+    const typeIconMap = {
+        'fastener': 'https://img.icons8.com/?size=50&id=20544&format=png&color=000000',
+        'engine': 'https://cdn-icons-png.flaticon.com/128/2061/2061956.png',
+        'transmission': 'https://cdn-icons-png.flaticon.com/128/17312/17312549.png',
+        'chassis': 'https://cdn-icons-png.flaticon.com/128/6477/6477179.png',
+        'suspension': 'https://cdn-icons-png.flaticon.com/128/887/887235.png',
+        'steeringsystem': 'https://cdn-icons-png.flaticon.com/128/14291/14291424.png',
+        'brakingsystem': 'https://cdn-icons-png.flaticon.com/128/2320/2320898.png',
+        'electricalsystem': 'https://cdn-icons-png.flaticon.com/128/12294/12294240.png'
+    };
+
+    const type = (data.type || '').toLowerCase().replace(/\s+/g, '');
+    const iconUrl = typeIconMap[type] || 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000';
+
+    $('#typeIcon').attr({
+      src: iconUrl,
+      width: 50,
+      height: 50
+    });
+
+    $('.state-box .state-label').remove();
+
+    if (data.state) {
+        $('<span>')
+            .addClass('state-label')
+            .text('State: ' + data.state)
+            .prependTo('.state-box');
+    }
+}
+function populateTable(part) {
+    const table = $('#detailsTable');
+    table.empty();
+    $('#errorMessage').hide();
+    $('#detailsTable').show();
+
+    if (part.name) {
+        const nameRow = $('<tr>');
+        nameRow.append($('<th>').text("Name"));
+        nameRow.append($('<td>').text(part.name ?? ''));
+        table.append(nameRow);
+    }
+
+    if (part.type && part.type.toLowerCase() === "fastener") {
+        if (part.fastenerSubpart) {
+            const fastenerSubpartRow = $('<tr>');
+            fastenerSubpartRow.append($('<th>').text("Fastener Subpart"));
+            fastenerSubpartRow.append($('<td>').text(part.fastenerSubpart ?? 'N/A'));
+            table.append(fastenerSubpartRow);
+        }
+
+        if (part.variant) {
+            const variantRow = $('<tr>');
+            variantRow.append($('<th>').text("Variant"));
+            variantRow.append($('<td>').text(part.variant ?? 'N/A'));
+            table.append(variantRow);
+        }
+    }
+
+    for (const key in part) {
+        if (['fts_document', 'objectid', 'historyList', 'fastenersubpart', 'variant', 'connectionid', 'name'].includes(key.toLowerCase())) {
+            continue;
+        }
+        if (key.toLowerCase() === 'currentstate' && (!part[key] || part[key].trim() === '')) {
+            continue;
+        }
+        const row = $('<tr>');
+        row.append($('<th>').text(prettyLabel(key.toLowerCase())));
+        row.append($('<td>').text(part[key] ?? 'N/A'));
+        table.append(row);
+    }
+}
+
+function openEditPanel(part) {
+    const form = $('#editForm');
+    form.empty();
+
+    const editableFields = ['description']; 
+
+    for (const key in part) {
+        if (!part.hasOwnProperty(key)) continue;
+        if (['objectid', 'historyList', 'fts_document', 'fastenersubpart', 'connectionid'].includes(key.toLowerCase())) continue;
+        if (key.toLowerCase() === 'currentstate' && (!part[key] || part[key].trim() === '')) {
+            continue;
+        }
+
+        const rawValue = part[key] ?? '';
+        const safeId = 'edit_' + key.replace(/[^a-zA-Z0-9]/g, '_');
+        const lowerKey = key.toLowerCase();
+        const label = prettyLabel(lowerKey);
+
+        const isEditable = editableFields.includes(lowerKey);
+
+        const formGroup = $('<div class="mb-3"></div>');
+        const labelEl = $('<label></label>')
+            .addClass('form-label')
+            .attr('for', safeId)
+            .text(label);
+
+        const inputEl = $('<input>')
+            .attr('type', 'text')
+            .addClass('form-control')
+            .attr('id', safeId)
+            .attr('name', lowerKey)
+            .val(rawValue);
+
+        if (!isEditable) {
+            inputEl.attr('readonly', true);
+        }
+
+        formGroup.append(labelEl);
+        formGroup.append(inputEl);
+        form.append(formGroup);
+    }
+
+    $('#editPanel').addClass('active');
+}
+
+function closeEditPanel() {
+    $('#editPanel').removeClass('active');
+}
+
+function getQueryParam(param) {
+    return new URLSearchParams(window.location.search).get(param);
+}
+
+function showLoading(show) {
+    $('#loadingSpinner').css('display', show ? 'block' : 'none');
+}
+
+function showError(msg) {
+    $('#errorMessage').text(msg).show();
+    $('#detailsTable').hide();
+    showLoading(false);
+}
+
+function prettyLabel(key) {
+    const map = {
+        description: "Description",
+        supertype: "Supertype",
+        type: "Type",
+        owner: "Owner",
+        createddate: "Created Date",
+        modifieddate: "Modified Date",
+        status: "Status",
+        version: "Version"
+    };
+    return map[key] || key;
+}
+</script>
 </body>
 </html>
