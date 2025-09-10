@@ -1237,40 +1237,101 @@ public class DataFetchService {
             }
         }
         
-        //Lifecycle
+        //PartLifecycle
         @PUT
         @Path("/updatestate/{objectId}")
+        @Consumes(MediaType.APPLICATION_JSON)
         @Produces(MediaType.APPLICATION_JSON)
-        public Response updateNextState(@PathParam("objectId") String objectId) throws SQLException {
-        	if (objectId == null || objectId.trim().isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"objectId must be provided\"}").build();
+        public Response updateToSpecificState(@PathParam("objectId") String objectId, String jsonBody) {
+            if (objectId == null || objectId.trim().isEmpty()) {
+                return Response.ok("{\"error\": \"objectId must be provided\"}").build();
             }
-        	try(Connection conn=DriverManager.getConnection(url, user,db_password)){
-        		String currentState = getCurrentState(conn, objectId);
-                if (currentState == null) {
-                    return Response.status(Response.Status.NOT_FOUND)
-                            .entity("{\"error\": \"Part not found for objectId: " + objectId + "\"}")
-                            .build();
-                }
-                List<String> stateSequence = getStateSequence(conn, "PartStates");
-                int index = stateSequence.indexOf(currentState);
-                if (index == -1 || index == stateSequence.size() - 1) {
-                    return Response.ok("{\"message\": \"Already in final state or state not recognized\", \"currentState\": \"" + currentState + "\"}")
-                            .build();
-                }
-                String nextState = stateSequence.get(index + 1);
-                updatePartState(conn, objectId, nextState);
+            String dataTable;
+            String ruleName;
+            String historyTable;
+            if (objectId.endsWith(".APN")) {
+                dataTable = "amxcorepartdata";
+                ruleName = "PartStates";
+                historyTable = "parthistory";
+            } else if (objectId.endsWith(".PACO")) {
+                dataTable = "amxpartcontroldata";
+                ruleName = "PartControlStates";
+                historyTable = "partcontrolhistory";
+            } else {
+                return Response.ok("{\"error\": \"Invalid objectId suffix\"}").build();
+            }
 
-                return Response.ok("{\"message\": \"State updated successfully\", \"newState\": \"" + nextState + "\"}")
+            try (Connection conn = DriverManager.getConnection(url, user, db_password)) {
+                JSONObject input = new JSONObject(jsonBody);
+                String newState = input.optString("state", "").trim();
+
+                if (newState.isEmpty()) {
+                    return Response.ok("{\"error\": \"State must be provided\"}").build();
+                }
+
+                String currentState = getCurrentState(conn, dataTable, objectId);
+                if (currentState == null) {
+                    return Response.ok("{\"error\": \"Part not found for objectId: " + objectId + "\"}").build();
+                }
+
+                List<String> validStates = getStateSequence(conn, ruleName);
+                if (!validStates.contains(newState)) {
+                    return Response.ok("{\"error\": \"Invalid state: " + newState + "\"}").build();
+                }
+
+                int currentIndex = validStates.indexOf(currentState);
+                int newIndex = validStates.indexOf(newState);
+
+                if (newIndex == currentIndex) {
+                    return Response.ok("{\"error\": \"New state is the same as current state.\"}").build();
+                }
+
+                String direction = (newIndex > currentIndex) ? "Promoted" : "Demoted";
+                String timestamp = java.time.LocalDateTime.now().toString();
+                String historyMessage = direction + " to state: " + newState + " at " + timestamp;
+
+                updatePartState(conn, dataTable, objectId, newState);
+                insertHistory(conn, historyTable, objectId, historyMessage);
+
+                return Response.ok("{\"message\": \"State updated successfully\", \"oldState\": \"" + currentState + "\", \"newState\": \"" + newState + "\"}")
                         .build();
-        	}catch (SQLException e) {
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                        .entity("{\"error\": \"Database error: " + e.getMessage() + "\"}")
-                        .build();
+
+            } catch (Exception e) {
+                return Response.ok("{\"error\": \"Internal error: " + e.getMessage() + "\"}").build();
             }
         }
-        public String getCurrentState(Connection conn, String objectId) throws SQLException {
-            String query = "SELECT currentstate FROM amxcorepartdata WHERE objectid = ?";
+
+        // GET current state API
+        @GET
+        @Path("/updatestate/{objectId}")
+        @Produces(MediaType.APPLICATION_JSON)
+        public Response getCurrentStateAPI(@PathParam("objectId") String objectId) {
+            if (objectId == null || objectId.trim().isEmpty()) {
+                return Response.ok("{\"error\": \"objectId must be provided\"}").build();
+            }
+
+            String dataTable;
+            if (objectId.endsWith(".APN")) {
+                dataTable = "amxcorepartdata";
+            } else if (objectId.endsWith(".PACO")) {
+                dataTable = "amxpartcontroldata";
+            } else {
+                return Response.ok("{\"error\": \"Invalid objectId suffix\"}").build();
+            }
+
+            try (Connection conn = DriverManager.getConnection(url, user, db_password)) {
+                String currentState = getCurrentState(conn, dataTable, objectId);
+                if (currentState == null) {
+                    return Response.ok("{\"error\": \"Part not found for objectId: " + objectId + "\"}").build();
+                }
+                return Response.ok("{\"currentState\": \"" + currentState + "\"}").build();
+            } catch (SQLException e) {
+                return Response.ok("{\"error\": \"Database error: " + e.getMessage() + "\"}").build();
+            }
+        }
+
+        public String getCurrentState(Connection conn, String tableName, String objectId) throws SQLException {
+            String query = "SELECT currentstate FROM " + tableName + " WHERE objectid = ?";
             try (PreparedStatement ps = conn.prepareStatement(query)) {
                 ps.setString(1, objectId);
                 try (ResultSet rs = ps.executeQuery()) {
@@ -1281,7 +1342,7 @@ public class DataFetchService {
             }
             return null;
         }
-        
+
         public List<String> getStateSequence(Connection conn, String ruleName) throws SQLException {
             String query = "SELECT rulevalue FROM amxschemarules WHERE rulename = ?";
             try (PreparedStatement ps = conn.prepareStatement(query)) {
@@ -1295,13 +1356,29 @@ public class DataFetchService {
             }
             return new ArrayList<>();
         }
-        public void updatePartState(Connection conn, String objectId, String newState) throws SQLException {
-            String updateQuery = "UPDATE amxcorepartdata SET currentstate = ? WHERE objectid = ?";
-            try (PreparedStatement ps = conn.prepareStatement(updateQuery)) {
+
+        public void updatePartState(Connection conn, String tableName, String objectId, String newState) throws SQLException {
+            String query = "UPDATE " + tableName + " SET currentstate=? WHERE objectid=?";
+            try (PreparedStatement ps = conn.prepareStatement(query)) {
                 ps.setString(1, newState);
                 ps.setString(2, objectId);
                 ps.executeUpdate();
             }
-        }   
-    }
+        }
+
+        public void insertHistory(Connection conn, String historyTable, String objectId, String historyMessage) throws SQLException {
+            String query = "INSERT INTO " + historyTable + " (objectid, history) VALUES (?, ?)";
+            try (PreparedStatement ps = conn.prepareStatement(query)) {
+                ps.setString(1, objectId);
+                ps.setString(2, historyMessage);
+                ps.executeUpdate();
+            }
+        }
+
+
+        
+        
+        
+        
+   }
 

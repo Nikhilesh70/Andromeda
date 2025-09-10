@@ -58,7 +58,8 @@
   .part-number {
     font-weight: 700;
     font-size: 14px;
-    padding-right: 12px;
+    padding-right: 13px;
+    padding-left:13px;
     border-right: 1px solid #cfd3db;
     margin-right: 12px;
   }
@@ -147,6 +148,10 @@
   padding: 20px;
   font-size: 14px;
   box-sizing: border-box;
+  resize: horizontal;
+  overflow-y: auto;
+  overflow-x: hidden; 
+  
 }
 
 .sidebar a {
@@ -350,7 +355,7 @@ table.properties th {
 
     <div class="part-info">
       <div class="part-number" style="font-weight: 700; font-size: 14px;"></div>
-      <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px;"></div>
+      <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px;padding-left:13px;"></div>
     </div>
     <div class="vertical-line"></div>
   </div>
@@ -498,34 +503,15 @@ $(document).ready(function () {
 });
 
 function populateTopBar(data) {
-    if (!data) return;
-
     $('.part-number').text(data.name || '');
     $('.part-type').text(data.type || '');
     $('.part-owner').text(data.owner || '');
     $('.part-created').text(data.createddate || '');
 
-    const typeIconMap = {
-        'fastener': 'https://img.icons8.com/?size=50&id=20544&format=png&color=000000',
-        'engine': 'https://cdn-icons-png.flaticon.com/128/2061/2061956.png',
-        'transmission': 'https://cdn-icons-png.flaticon.com/128/17312/17312549.png',
-        'chassis': 'https://cdn-icons-png.flaticon.com/128/6477/6477179.png',
-        'suspension': 'https://cdn-icons-png.flaticon.com/128/887/887235.png',
-        'steeringsystem': 'https://cdn-icons-png.flaticon.com/128/14291/14291424.png',
-        'brakingsystem': 'https://cdn-icons-png.flaticon.com/128/2320/2320898.png',
-        'electricalsystem': 'https://cdn-icons-png.flaticon.com/128/12294/12294240.png'
-    };
-
-    const type = (data.type || '').toLowerCase().replace(/\s+/g, '');
-    const iconUrl = typeIconMap[type] || 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000';
-
-    $('#typeIcon').attr({
-      src: iconUrl,
-      width: 50,
-      height: 50
-    });
-
-    $('.state-box .state-label').remove();
+    const icon = (data.type && data.type.toLowerCase() === 'fastener') 
+        ? 'https://img.icons8.com/?size=50&id=20544&format=png&color=000000'
+        : 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000';
+    $('#typeIcon').attr('src', icon);
 
     if (data.state) {
         $('<span>')

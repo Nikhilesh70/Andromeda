@@ -163,6 +163,9 @@
   padding: 20px;
   font-size: 14px;
   box-sizing: border-box;
+   resize: horizontal;
+  overflow-y: auto;
+  overflow-x: hidden; 
 }
 
 .sidebar a {
@@ -536,7 +539,7 @@ function loadPartControlTable() {
             if (objectid) {
                 const panel = document.getElementById('createPanel');
                 panel.classList.add('active');
-                document.getElementById('createIframe').src = 'CreatePartSpecification.jsp?name=' + encodeURIComponent(objectid);
+                document.getElementById('createIframe').src = 'Partcontrolwithconnection.jsp?name=' + encodeURIComponent(objectid);
             } else {
                 alert('No object ID found!');
             }

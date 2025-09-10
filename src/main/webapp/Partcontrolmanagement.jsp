@@ -66,7 +66,8 @@
   .part-number {
     font-weight: 700;
     font-size: 14px;
-    padding-right: 12px;
+    padding-right: 13px;
+    padding-left:13px;
     border-right: 1px solid #cfd3db;
     margin-right: 12px;
   }
@@ -163,6 +164,9 @@
   padding: 20px;
   font-size: 14px;
   box-sizing: border-box;
+   resize: horizontal;
+  overflow-y: auto;
+  overflow-x: hidden; 
 }
 
 .sidebar a {
@@ -350,11 +354,11 @@ forn-wrap-mode:nowrap;
 <div class="topbar">
     <div class="left-section">
         <div class="image-box">
-            <img src="https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000" alt="Folder Icon" />
+      <img src="https://img.icons8.com/?size=50&id=WECphWgmeM0g&format=png&color=000000" alt="Folder Icon" />
         </div>
         <div class="part-info">
             <div class="part-number" style="font-weight: 700; font-size: 14px;"></div>
-            <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px;"></div>
+            <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px; padding-left:13px"></div>
         </div>
         <div class="vertical-line"></div>
     </div>
