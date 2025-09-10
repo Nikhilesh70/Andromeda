@@ -332,7 +332,7 @@ public class DataFetchAMD {
             return sObjectId;
         }
         
-        @SuppressWarnings("rawtypes")
+        @SuppressWarnings({ "rawtypes", "unchecked" })
         public List<Map> getConnectedPartControlObjects(String objectId) {
             List<Map> listOfMaps = new ArrayList<>();
             String sparticularquery = "SELECT * FROM amxpartcontroldata WHERE objectid=?";
@@ -381,4 +381,61 @@ public class DataFetchAMD {
 
             return connectionids;  
         }
+        
+     //lifecycle
+        public String getCurrentState() {
+    		String query="select currentstate from amxcorepartdata where objectid=?";
+    		String currentstate="";
+    		try{
+    			Connection conn=DriverManager.getConnection(url,user,db_password);
+    			PreparedStatement pstmt=conn.prepareStatement(query);
+    			pstmt.setString(1, objectId);
+    			ResultSet rs=pstmt.executeQuery();
+    			if(rs.next()) {
+    				currentstate=rs.getString("currentstate");
+    			}
+    		}catch(Exception e) {
+    			e.printStackTrace();
+    		}
+    		return currentstate;
+    	}
+        
+        public List<String> getAllStates(String ruleName) {
+    	    List<String> values = new ArrayList<>();
+    	    String query = "SELECT rulevalue FROM amxschemarules WHERE rulename = ?";
+    	    try {
+    	    	Connection conn = DriverManager.getConnection(url, user, db_password);
+    	         PreparedStatement pstmt = conn.prepareStatement(query); 
+    	        pstmt.setString(1, ruleName);
+    	        try (ResultSet rs = pstmt.executeQuery()) {
+    	            if (rs.next()) {
+    	            	 values.add(rs.getString("rulevalue"));
+    	            }
+    	        }
+    	    } catch (Exception e) {
+    	        e.printStackTrace();
+    	    }
+    	    return values;
+    	}
+        public void updatePartState(String objectId, String newState) {
+            String table = null;
+            if (objectId.contains(".APN")) {
+                table = "amxcorepartdata";
+            } else if (objectId.contains(".PACO")) {
+                table = "amxpartcontroldata";
+            } else {
+                //System.out.println("Unknown object ID format: " + objectId);
+                return;
+            }
+            String query = "UPDATE " + table + " SET currentstate=? WHERE objectid=?";
+            try (Connection conn = DriverManager.getConnection(url, user, db_password);
+                 PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setString(1, newState);
+                pstmt.setString(2, objectId);
+                pstmt.executeUpdate();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
 }

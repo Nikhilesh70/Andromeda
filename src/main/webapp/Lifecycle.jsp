@@ -163,6 +163,9 @@
   padding: 20px;
   font-size: 14px;
   box-sizing: border-box;
+   resize: horizontal;
+  overflow-y: auto;
+  overflow-x: hidden; 
 }
 
 .sidebar a {
@@ -482,7 +485,7 @@ function setLoading(loading) {
 function fetchStateOnly(objectId) {
     setLoading(true);
     $.ajax({
-    	url: 'http://localhost:8080/andromeda/api/datafetchservice/updatestate/' + objectId,
+    	url: 'http://localhost:8080/andromeda/api/datafetchservice/updatestate/' + encodeURIComponent(objectId),
         type: 'GET',
         dataType: 'json',
         success: function(response) {
@@ -553,7 +556,7 @@ $(document).ready(function() {
         setLoading(true);
 
         $.ajax({
-            url: 'http://localhost:8080/andromeda/api/datafetchservice/updatestate/' + objectId,
+            url: 'http://localhost:8080/andromeda/api/datafetchservice/updatestate/' +encodeURIComponent(objectId),
             type: 'PUT',
             contentType: "application/json",
             data: JSON.stringify({ state: selectedState }),
@@ -571,7 +574,7 @@ $(document).ready(function() {
     $("#nextStateBtn").on("click", function() {
         setLoading(true);
         $.ajax({
-        	url: 'http://localhost:8080/andromeda/api/datafetchservice/updatestate/' + objectId,
+        	url: 'http://localhost:8080/andromeda/api/datafetchservice/updatestate/' +encodeURIComponent(objectId),
             type: 'PUT',
             contentType: "application/json",
             success: function(response) {
