@@ -9,7 +9,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Control Management</title>
+<title>Part Specification</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -385,6 +385,8 @@ forn-wrap-mode:nowrap;
         <a class="nav-link" href="Lifecycle.jsp?name=<%= request.getParameter("name") %>">LifeCycle</a>
         <a class="nav-link" href="ControlManagement.jsp?name=<%= request.getParameter("name") %>">Control Management</a>
    		<a class="nav-link active" href="PartSpecification.jsp?name=<%= request.getParameter("name") %>">PartSpecification</a>
+   		<a class="nav-link" href="SpecificationDocumentUpload.jsp?name=<%=request.getParameter("name") %>">SpecificationDocument</a>
+   		
     </div>
    <div class="main-panel">
     <div class="toolbar mt-2">
@@ -398,10 +400,15 @@ forn-wrap-mode:nowrap;
 
     <div id="loadingSpinner"></div>
     <div id="errorMessage" class="error"></div>
-    <table class="table table-bordered mt-2" id="partControlTable">
-        <thead></thead>
-        <tbody></tbody>
-    </table>
+    <table class="table table-bordered mt-2" id="partSpecificationTable">
+    <thead>
+        <tr>
+
+        </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
 </div>
     <div id="createPanel">
         <iframe id="createIframe" src=""></iframe>
@@ -416,7 +423,7 @@ function receiveSelectedParts(selectedParts) {
     }
     console.log("Received selected parts:", selectedParts);
 
-    const table = $('#partControlTable').DataTable();
+    const table = $('#partSpecificationTable').DataTable();
 
     if (!table) {
         console.log("Table not initialized. Initializing...");
@@ -432,6 +439,7 @@ function receiveSelectedParts(selectedParts) {
 
     $('#errorMessage').text('New parts added.');
 }
+
 function loadPartControlTable() {
     $('#errorMessage').text('Loading part controls...');
 
@@ -442,6 +450,58 @@ function loadPartControlTable() {
         $('#errorMessage').text('Missing object ID.');
         return;
     }
+
+    $.ajax({
+        url: 'http://localhost:8080/andromeda/api/datafetchservice/getcreatedpartspecification',
+        data: { objectid: objectid },
+        dataType: 'json',
+        cache: false,
+        success: function(data) {
+            $('#errorMessage').text('');
+            if (!data || data.length === 0 || data.message) {
+                $('#errorMessage').text(data.message || 'No part Specification found.');
+                if ($.fn.DataTable.isDataTable('#partSpecificationTable')) {
+                    $('#partSpecificationTable').DataTable().clear().draw();
+                }
+                return;
+            }
+
+            const excludedFields = ['objectid', 'linkedobjectid', 'connectionid'];
+            const columns = Object.keys(data[0])
+                .filter(key => !excludedFields.includes(key)) 
+                .map(key => ({
+                    data: key,
+                    title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ') 
+                }));
+
+            if ($.fn.DataTable.isDataTable('#partSpecificationTable')) {
+                $('#partSpecificationTable').DataTable().clear().destroy();
+            }
+
+            const thead = $('#partSpecificationTable thead');
+            thead.empty();
+            const headerRow = $('<tr></tr>');
+            columns.forEach(col => {
+                headerRow.append(`<th>${col.title}</th>`);
+            });
+            thead.append(headerRow);
+
+            $('#partSpecificationTable').DataTable({
+                data: data,
+                columns: columns,
+                order: [[columns.findIndex(c => c.data === 'createdtime') || 0, 'desc']],
+                paging: false,
+                searching: false,
+                scrollX: true,
+                info: false,
+                destroy: true
+            });
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX error:', status, error);
+            $('#errorMessage').text('Failed to load part controls.');
+        }
+    });
 }
     $(document).ready(function() {
         loadPartControlTable();
@@ -474,7 +534,7 @@ function loadPartControlTable() {
             if (objectid) {
                 const panel = document.getElementById('createPanel');
                 panel.classList.add('active');
-                document.getElementById('createIframe').src = 'CreatePartSpecification.jsp?name=' + encodeURIComponent(objectid);
+                document.getElementById('createIframe').src = 'PartSpecificationwithconnection.jsp?name=' + encodeURIComponent(objectid);
             } else {
                 alert('No object ID found!');
             }
@@ -505,8 +565,7 @@ function loadPartControlTable() {
 
     	  if (action === 'closeAndRefresh') {
     	    createPanel.classList.remove('active');
-
-    	    refreshPartControlList(); 
+    	    loadPartControlTable();
     	  }
     	});
 
