@@ -385,6 +385,8 @@ forn-wrap-mode:nowrap;
         <a class="nav-link" href="Lifecycle.jsp?name=<%= request.getParameter("name") %>">LifeCycle</a>
         <a class="nav-link active" href="ControlManagement.jsp?name=<%= request.getParameter("name") %>">Control Management</a>
    		<a class="nav-link" href="PartSpecification.jsp?name=<%= request.getParameter("name") %>">PartSpecification</a>
+   		<a class="nav-link" href="SpecificationDocumentUpload.jsp?name=<%=request.getParameter("name") %>">SpecificationDocument</a>
+   		
     </div>
    <div class="main-panel">
     <div class="toolbar mt-2">
@@ -399,9 +401,14 @@ forn-wrap-mode:nowrap;
     <div id="loadingSpinner"></div>
     <div id="errorMessage" class="error"></div>
     <table class="table table-bordered mt-2" id="partControlTable">
-        <thead></thead>
-        <tbody></tbody>
-    </table>
+    <thead>
+        <tr>
+
+        </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
 </div>
     <div id="createPanel">
         <iframe id="createIframe" src=""></iframe>
@@ -449,7 +456,6 @@ function loadPartControlTable() {
         cache: false,
         success: function(data) {
             $('#errorMessage').text('');
-
             if (!data || data.length === 0 || data.message) {
                 $('#errorMessage').text(data.message || 'No part controls found.');
                 if ($.fn.DataTable.isDataTable('#partControlTable')) {
@@ -474,7 +480,7 @@ function loadPartControlTable() {
             const keys = Object.keys(filteredData[0]);
             const excludeKeys = ['objectid', 'connectionid', 'linkedobjectid', 'fts_document'];
             const finalKeys = keys.filter(k => !excludeKeys.includes(k));
-
+            c
             const columns = finalKeys.map(key => ({
                 data: key,
                 title: key.charAt(0).toUpperCase() + key.slice(1)
@@ -484,12 +490,14 @@ function loadPartControlTable() {
                 $('#partControlTable').DataTable().destroy();
                 $('#partControlTable thead').empty(); 
             }
+
             const thead = $('#partControlTable thead');
             const headerRow = $('<tr></tr>');
             columns.forEach(col => {
                 headerRow.append(`<th>${col.title}</th>`);
             });
             thead.append(headerRow);
+
             $('#partControlTable').DataTable({
                 data: filteredData,
                 columns: columns,
@@ -501,7 +509,6 @@ function loadPartControlTable() {
                 destroy: true
             });
         },
-
         error: function() {
             $('#errorMessage').text('Failed to load part controls.');
         }
@@ -570,8 +577,8 @@ function loadPartControlTable() {
 
     	  if (action === 'closeAndRefresh') {
     	    createPanel.classList.remove('active');
-
-    	    refreshPartControlList(); 
+    	    loadPartControlTable();
+    	    <!--refreshPartControlList(); -->
     	  }
     	});
 

@@ -14,6 +14,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 import jakarta.ws.rs.core.Response.Status;
 import amd.Person;
+import amd.AmxQueryFromDB;
 import amd.AmxSchemasrules;
 @Path("/datafetchservice")
 public class DataFetchService {
@@ -568,7 +569,6 @@ public class DataFetchService {
                     .entity(Map.of("error", "Missing required 'partcontrol' data"))
                     .build();
             }
-
             Object partObj = inputData.get("partcontrol");
             if (!(partObj instanceof Map)) {
                 return Response.status(Response.Status.BAD_REQUEST)
@@ -1375,10 +1375,223 @@ public class DataFetchService {
             }
         }
 
+//partspecificationwithconnection
+        @SuppressWarnings("unchecked")
+		@POST
+        @Path("/partspecificationwithconnection")
+        @Consumes(MediaType.APPLICATION_JSON)
+        @Produces(MediaType.APPLICATION_JSON)
+        public Response partSpecificationWithConnection(Map<String, Object> inputData) {
+            try {
+                if (inputData == null || !inputData.containsKey("partSpecification")) {
+                    return Response.ok(Map.of("error", "Missing required 'partspecification' data")).build();
+                }
+                Object partObj = inputData.get("partSpecification");
+                if (!(partObj instanceof Map)) {
+                    return Response.ok(Map.of("error", "'partspecification' must be a JSON object")).build();
+                }
+                Map<String, Object> rawPartSpecification = (Map<String, Object>) partObj;
+                Map<String, String> partSpecificationMap = new HashMap<>();
+                for (Map.Entry<String, Object> entry : rawPartSpecification.entrySet()) {
+                    partSpecificationMap.put(entry.getKey().toLowerCase(), entry.getValue() == null ? "" : entry.getValue().toString());
+                }
 
-        
-        
-        
+                String sourceObjectId = partSpecificationMap.get("sourceobjectid");
+                if (sourceObjectId == null || sourceObjectId.isEmpty()) {
+                    sourceObjectId = partSpecificationMap.get("objectid");
+                }
+
+                if (sourceObjectId == null || sourceObjectId.isEmpty()) {
+                    return Response.ok(Map.of("error", "Missing 'sourceobjectid' or 'objectid' in partSpecification data")).build();
+                }
+
+                if (isPartSpecificationLinkedToSource(sourceObjectId)) {
+                    return Response.ok(Map.of("error", "A PartSpecification linked to the sourceObjectId '" + sourceObjectId + "' already exists.")).build();
+                }
+                String generatedName = getNextPartSpecificationName();
+                String generatedPartId = generateHexaId("PASP");
+                String existingConnectionId = getConnectionId(sourceObjectId);
+                String connectionIdToUse = (existingConnectionId != null && !existingConnectionId.isEmpty())
+                        ? existingConnectionId
+                        : generateHexaId("CONN");
+                partSpecificationMap.put("name", generatedName);
+                partSpecificationMap.put("objectid", generatedPartId);
+                partSpecificationMap.put("connectionid", connectionIdToUse);
+                partSpecificationMap.put("linkedobjectid", sourceObjectId);
+                String insertPartControlSQL = "INSERT INTO amxpartspecificationdata (objectid, name, supertype, type, description, createdtime, owner, email, modifiedtime, connectionid, linkedobjectid) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                try (Connection conn = DriverManager.getConnection(url, user, db_password);
+                     PreparedStatement ps = conn.prepareStatement(insertPartControlSQL)) {
+                    ps.setString(1, generatedPartId);
+                    ps.setString(2, generatedName);
+                    ps.setString(3, rawPartSpecification.getOrDefault("supertype", "").toString());
+                    ps.setString(4, rawPartSpecification.getOrDefault("type", "").toString());
+                    ps.setString(5, rawPartSpecification.getOrDefault("description", "").toString());
+                    ps.setTimestamp(6, Timestamp.valueOf(LocalDateTime.now()));
+                    ps.setString(7, rawPartSpecification.getOrDefault("owner", "").toString());
+                    ps.setString(8, rawPartSpecification.getOrDefault("email", "").toString());
+                    ps.setTimestamp(9, Timestamp.valueOf(LocalDateTime.now()));
+                    ps.setString(10, connectionIdToUse);
+                    ps.setString(11, sourceObjectId);
+                    ps.executeUpdate();
+                }
+
+                String insertConnectionDataSQL = "INSERT INTO amxcoreconnectiondata (connectionid, type, name, fromid, toid, fromname, toname, createddate) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                try (Connection conn = DriverManager.getConnection(url, user, db_password);
+                     PreparedStatement ps = conn.prepareStatement(insertConnectionDataSQL)) {
+                    ps.setString(1, connectionIdToUse);
+                    ps.setString(2, rawPartSpecification.getOrDefault("type", "").toString());
+                    ps.setString(3, generatedName);
+                    ps.setString(4, generatedPartId);
+                    ps.setString(5, sourceObjectId);
+                    ps.setString(6, "partSpecification");
+                    ps.setString(7, "part");
+                    ps.setTimestamp(8, Timestamp.valueOf(LocalDateTime.now()));
+                    ps.executeUpdate();
+                }
+
+                String updatePartDataSQL = "UPDATE amxcorepartdata SET connectionid = ? WHERE objectid = ?";
+                try (Connection conn = DriverManager.getConnection(url, user, db_password);
+                     PreparedStatement ps = conn.prepareStatement(updatePartDataSQL)) {
+                    ps.setString(1, connectionIdToUse);  
+                    ps.setString(2, sourceObjectId);      
+                    ps.executeUpdate();
+                }
+                String historyMsg = "Created by system at " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                String insertHistorySQL = "INSERT INTO partspecificationhistory (objectid, history) VALUES (?, ?)";
+                try (Connection conn = DriverManager.getConnection(url, user, db_password);
+                     PreparedStatement ps = conn.prepareStatement(insertHistorySQL)) {
+                    ps.setString(1, generatedPartId);
+                    ps.setString(2, historyMsg);
+                    ps.executeUpdate();
+                }
+                return Response.ok(Map.of("objectid", generatedPartId,"connectionid", connectionIdToUse,"name", generatedName)).build();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                return Response.ok(Map.of("error", "Failed to create partcontrol: " + e.getMessage())).build();
+            }
+        }
+            public boolean isPartSpecificationLinkedToSource(String sourceObjectId) {
+                String sql = "SELECT COUNT(*) FROM amxpartspecificationdata WHERE linkedobjectid = ?";
+                try (Connection conn = DriverManager.getConnection(url, user, db_password);
+                     PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, sourceObjectId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            return rs.getInt(1) > 0;
+                        }
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                return false;
+            }
+            public String getNextPartSpecificationName() throws SQLException {
+                String prefix = "PASP-";
+                String query = "SELECT name FROM amxpartspecificationdata WHERE name LIKE ? ORDER BY name DESC LIMIT 1";
+                String lastName = null;
+
+                try (Connection conn = DriverManager.getConnection(url, user, db_password);
+                     PreparedStatement ps = conn.prepareStatement(query)) {
+                    ps.setString(1, prefix + "%");
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            lastName = rs.getString("name");
+                        }
+                    }
+                }
+
+                int nextNumber = 1;
+                if (lastName != null && lastName.startsWith(prefix)) {
+                    String numberPart = lastName.substring(prefix.length());
+                    try {
+                        nextNumber = Integer.parseInt(numberPart) + 1;
+                    } catch (NumberFormatException e) {
+                        nextNumber = 1;
+                    }
+                }
+
+                return String.format("%s%06d", prefix, nextNumber);
+            }
+
+            public String generateHexaId(String suffix) {
+                SecureRandom random = new SecureRandom();
+                StringBuilder sb = new StringBuilder();
+
+                for (int i = 0; i < 4; i++) {
+                    String segment = Integer.toHexString(random.nextInt(0x10000)).toUpperCase();
+                    while (segment.length() < 4) {
+                        segment = "0" + segment;
+                    }
+                    sb.append(segment);
+                    if (i < 3) sb.append(".");
+                }
+
+                sb.append(".").append(suffix.toUpperCase());
+                return sb.toString();
+            }
+            public String getConnectionId(String objectId) {
+                String sql = "SELECT connectionid FROM amxpartspecificationdata WHERE objectid = ?";
+                try (Connection conn = DriverManager.getConnection(url, user, db_password);
+                     PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, objectId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            return rs.getString("connectionid");
+                        }
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+
+            //getCreatedpartSpecification
+            @GET
+            @Path("/getcreatedpartspecification")
+            @Produces(MediaType.APPLICATION_JSON)
+            public Response getPartSpecificationByObjectId(@QueryParam("objectid") String objectid) {
+                if (objectid == null || objectid.trim().isEmpty()) {
+                    return Response.ok("{\"error\":\"objectid query parameter is required\"}").build();
+                }
+                String sql = "SELECT * FROM amxpartspecificationdata WHERE linkedobjectid = ? ORDER BY createdtime DESC";
+                List<Map<String, String>> results = new ArrayList<>();
+                try (Connection conn = getConn();
+                     PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setString(1, objectid.trim());
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        ResultSetMetaData metaData = rs.getMetaData();
+                        int colCount = metaData.getColumnCount();
+                        while (rs.next()) {
+                            Map<String, String> row = new LinkedHashMap<>();
+                            for (int i = 1; i <= colCount; i++) {
+                                row.put(metaData.getColumnName(i), rs.getString(i));
+                            }
+                            results.add(row);
+                        }
+                    }
+                    if (results.isEmpty()) {
+                        return Response.ok("{\"message\":\"No partSpecifications found.\"}").build();
+                    }
+                    return Response.ok(results).build();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return Response.ok("{\"error\":\"" + e.getMessage() + "\"}").build();
+                }
+            }
+        // QueryFromDB
+            @GET
+            @Path("/executequery")
+            @Produces(MediaType.TEXT_PLAIN)
+            public String executeQueryFromDB(@QueryParam("sql") String sql) {
+                if (sql == null || sql.trim().isEmpty()) {
+                    return "Missing 'sql' query parameter";
+                }
+                AmxQueryFromDB db = new AmxQueryFromDB();
+                return db.executeQuery(sql);
+            }        
         
    }
 
