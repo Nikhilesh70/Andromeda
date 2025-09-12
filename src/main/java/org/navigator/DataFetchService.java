@@ -16,6 +16,7 @@ import jakarta.ws.rs.core.Response.Status;
 import amd.Person;
 import amd.AmxQueryFromDB;
 import amd.AmxSchemasrules;
+import amd.AmxSpecificationDocument;
 @Path("/datafetchservice")
 public class DataFetchService {
     public static final String url = "jdbc:postgresql://localhost:5432/Andromeda";
@@ -1581,17 +1582,58 @@ public class DataFetchService {
                     return Response.ok("{\"error\":\"" + e.getMessage() + "\"}").build();
                 }
             }
+            
         // QueryFromDB
             @GET
             @Path("/executequery")
             @Produces(MediaType.TEXT_PLAIN)
-            public String executeQueryFromDB(@QueryParam("sql") String sql) {
+            public Response executeQueryFromDB(@QueryParam("sql") String sql) {
                 if (sql == null || sql.trim().isEmpty()) {
-                    return "Missing 'sql' query parameter";
+                    return Response.ok("Missing or invalid 'sql' query parameter.").build();
                 }
-                AmxQueryFromDB db = new AmxQueryFromDB();
-                return db.executeQuery(sql);
-            }        
-        
+                try {
+                    AmxQueryFromDB db = new AmxQueryFromDB();
+                    String result = db.executeQuery(sql.trim());
+                    if (result == null || result.trim().isEmpty()) {
+                        return Response.ok("No result returned from the query.").build();
+                    }
+                    return Response.ok(result).build();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return Response.ok("Error executing query: " + e.getMessage()).build();
+                   
+                }
+            }
+            
+          //fileupload
+            @POST
+            @Path("/upload")
+            @Consumes(MediaType.APPLICATION_JSON)
+            @Produces(MediaType.TEXT_PLAIN)
+            public Response uploadFile(String jsonPayload) {
+                try {
+                    javax.json.JsonReader reader = javax.json.Json.createReader(new java.io.StringReader(jsonPayload));
+                    javax.json.JsonObject json = reader.readObject();
+
+                    String objectid = json.getString("objectid", null);
+                    String fileName = json.getString("fileName", null);
+                    String fileContentBase64 = json.getString("fileContentBase64", null);
+
+                    if (objectid == null || fileName == null || fileContentBase64 == null) {
+                        return Response.status(Response.Status.BAD_REQUEST)
+                                .entity("Missing required fields").build();
+                    }
+
+                    byte[] fileBytes = java.util.Base64.getDecoder().decode(fileContentBase64);
+                    amd.AmxSpecificationDocument doc = amd.AmxSpecificationDocument.insertFile(objectid, fileBytes, fileName);
+                    return Response.ok("File inserted with ID: " + doc.fileid).build();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return Response.serverError().entity("Error: " + e.getMessage()).build();
+                }
+            }
+
+
+            
    }
 
