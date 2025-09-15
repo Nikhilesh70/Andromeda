@@ -379,7 +379,9 @@ forn-wrap-mode:nowrap;
     </div>
 </div>
 <div class="container">
-    <div class="sidebar">
+    <div 
+    
+    class="sidebar">
        <a class="nav-link" href="Properties.jsp?name=<%= request.getParameter("name") %>">Part Properties</a>
         <a class="nav-link" href="Parthistory.jsp?name=<%= request.getParameter("name") %>">History</a>
         <a class="nav-link" href="Lifecycle.jsp?name=<%= request.getParameter("name") %>">LifeCycle</a>
@@ -415,22 +417,19 @@ forn-wrap-mode:nowrap;
     </div>
 </div>
 <script>
-
 function receiveSelectedParts(selectedParts) {
     if (!selectedParts || selectedParts.length === 0) {
         console.log("No parts selected.");
         return; 
     }
     console.log("Received selected parts:", selectedParts);
-
-    const table = $('#partSpecificationTable').DataTable();
-
+    let table = $('#partSpecificationTable').DataTable();
     if (!table) {
         console.log("Table not initialized. Initializing...");
         loadPartControlTable();
+        setTimeout(() => receiveSelectedParts(selectedParts), 500);
         return;
     }
-
     selectedParts.forEach(part => {
         const columns = table.settings().init().columns;
         const newRowData = columns.map(col => part[col.data] || '');
@@ -439,6 +438,7 @@ function receiveSelectedParts(selectedParts) {
 
     $('#errorMessage').text('New parts added.');
 }
+
 
 function loadPartControlTable() {
     $('#errorMessage').text('Loading part controls...');
@@ -466,7 +466,7 @@ function loadPartControlTable() {
                 return;
             }
 
-            const excludedFields = ['objectid', 'linkedobjectid', 'connectionid'];
+            const excludedFields = ['objectid', 'linkedobjectid', 'connectionid','fts_document'];
             const columns = Object.keys(data[0])
                 .filter(key => !excludedFields.includes(key)) 
                 .map(key => ({
@@ -553,21 +553,18 @@ function loadPartControlTable() {
         }
     });
 
-    window.addEventListener('message', function (event) {
-    	  const action = event.data?.action;
-    	  const createPanel = document.getElementById('createPanel');
+    window.addEventListener('message', function(event) {
+        if (!event.data) return;
 
-    	  if (!createPanel) return;
-
-    	  if (action === 'closeOnly') {
-    	    createPanel.classList.remove('active');
-    	  }
-
-    	  if (action === 'closeAndRefresh') {
-    	    createPanel.classList.remove('active');
-    	    loadPartControlTable();
-    	  }
-    	});
+        if (event.data.action === 'closeOnly') {
+            document.getElementById('createPanel').classList.remove('active');
+        } else if (event.data.action === 'closeAndRefresh') {
+            document.getElementById('createPanel').classList.remove('active');
+            loadPartControlTable();
+        } else if (event.data && event.data.selectedParts) {
+            receiveSelectedParts(event.data.selectedParts);
+        }
+    });
 
     function closeCreatePanel() {
         const panel = document.getElementById('createPanel');

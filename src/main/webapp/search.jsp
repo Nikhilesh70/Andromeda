@@ -70,7 +70,7 @@
     table {
       width: 100%;
       table-layout: auto;
-      text-wrap-mode:nowrap;
+      text-wrap-mode: nowrap;
     }
 
     #example {
@@ -90,7 +90,6 @@
         width: 90%;
       }
     }
-
   </style>
 </head>
 
@@ -137,7 +136,6 @@
         <li>Try more general keywords.</li>
     </ul>
   </div>
-
   <div class="d-flex justify-content-end gap-2" style="position: fixed; bottom: 20px; right: 20px;">
     <button id="cancelBtn" class="btn btn-secondary">Cancel</button>
     <button id="okBtn" class="btn btn-primary">OK</button>
@@ -198,7 +196,7 @@
 
         	    if (data.Status === "Success" && Array.isArray(data.Results)) {
         	      if (data.Results.length > 0) {
-        	        renderResults(data.Results);  
+        	    	  renderResults(data.Results, query);
         	      } else {
         	        renderNoResults();  
         	      }
@@ -221,89 +219,86 @@
         	});
       });
 
-      function renderResults(results) {
-    	    $resultsTable.show();
-    	    $noResultsDiv.hide();  
-    	    $errorMessage.hide();
-    	    $('#searchInput').val(''); 
+      function renderResults(results, searchQuery) {
+    	  $resultsTable.show();
+    	  $noResultsDiv.hide();
+    	  $errorMessage.hide();
+    	  $('#searchInput').val('');
 
-    	    if (dataTableInstance) {
-    	        dataTableInstance.destroy();
-    	        dataTableInstance = null;
-    	    }
+    	  if (dataTableInstance) {
+    	    dataTableInstance.destroy();
+    	    dataTableInstance = null;
+    	  }
 
-    	    $tableHeaderRow.empty();
-    	    $resultsBody.empty();
+    	  $tableHeaderRow.empty();
+    	  $resultsBody.empty();
 
-    	    const keys = Object.keys(results[0]);
-    	    $tableHeaderRow.append('<th><input type="checkbox" id="selectAll" /> Select All</th>');
+    	  searchQuery = searchQuery.toLowerCase();
 
-    	    const type = results[0].type; 
-    	    let columnsToShow = [];
+    	  let columnsToShow = [];
+
+    	  if (searchQuery === 'pasp') {
+    	    columnsToShow = ["name", "supertype", "type", "description", "createdtime", "owner", "email"];
+    	  } else {
+    	    const type = results[0].type;
 
     	    if (type === 'fastener') {
-    	        columnsToShow = ["name", "apn", "supertype", "type", "description", "createddate", "owner", "email", "fastenersubpart", "variant"];
+    	      columnsToShow = ["name", "apn", "supertype", "type", "description", "createddate", "owner", "email", "fastenersubpart", "variant"];
     	    } else if (type === 'partcontrol') {
-    	        columnsToShow = ["name", "supertype", "type", "description", "createddate", "owner", "email", "assignee"];
+    	      columnsToShow = ["name", "supertype", "type", "description", "createddate", "owner", "email", "assignee"];
     	    } else {
-    	        columnsToShow = ["name", "apn", "supertype", "type", "description", "createddate", "owner", "email"];
+    	      columnsToShow = ["name", "apn", "supertype", "type", "description", "createddate", "owner", "email"];
     	    }
+    	  }
 
-    	   
-    	    columnsToShow.forEach(key => {
-    	        $tableHeaderRow.append(`<th>${key.charAt(0).toUpperCase() + key.slice(1)}</th>`);
-    	    });
+    	  // Build columns array for DataTable with data keys
+    	  const dtColumns = [
+    	    { data: null, defaultContent: '', className: 'select-checkbox', orderable: false }
+    	  ].concat(columnsToShow.map(key => ({
+    	    data: key,
+    	    title: key.charAt(0).toUpperCase() + key.slice(1)
+    	  })));
 
-    	    const dataRows = results.map(item => {
-    	        return [
-    	            `<input type="checkbox" class="rowCheckbox" data-id="${item.objectid}"/>`
-    	        ].concat(columnsToShow.map(k => item[k] ?? ''));
-    	    });
+    	  dataTableInstance = new DataTable('#example', {
+    	    data: results,  // pass the full object array directly here
+    	    columns: dtColumns,
+    	    columnDefs: [{
+    	      orderable: false,
+    	      className: 'select-checkbox',
+    	      targets: 0
+    	    }],
+    	    select: {
+    	      style: 'multi',
+    	      selector: 'td:first-child'
+    	    },
+    	    order: [[1, 'asc']],
+    	    paging: false,
+    	    info: false,
+    	    lengthChange: false,
+    	    ordering: true
+    	  });
 
-    	    dataTableInstance = new DataTable('#example', {
-    	        columnDefs: [
-    	            {
-    	                orderable: false,
-    	                render: function(data, type, row) {
-    	                    return '<input type="checkbox" class="select-checkbox" />';
-    	                },
-    	                targets: 0
-    	            }
-    	        ],
-    	        select: {
-    	            style: 'os',
-    	            selector: 'td:first-child'
-    	        },
-    	        order: [[1, 'asc']],
-    	        data: dataRows,
-    	        columns: [{ title: "", defaultContent: "", className: "select-checkbox", orderable: false }]
-    	            .concat(columnsToShow.map(key => ({ title: key.charAt(0).toUpperCase() + key.slice(1) }))),
-    	        paging: false,
-    	        info: false,
-    	        lengthChange: false,
-    	        ordering: true
-    	    });
+    	  // Insert the select all checkbox header dynamically
+    	  $tableHeaderRow.append('<th><input type="checkbox" id="selectAll" /></th>');
+    	  columnsToShow.forEach(key => {
+    	    $tableHeaderRow.append(`<th>${key.charAt(0).toUpperCase() + key.slice(1)}</th>`);
+    	  });
 
-    	    $('#selectAll').on('change', function() {
-    	        const isChecked = $(this).prop('checked');
-    	        $('.rowCheckbox').prop('checked', isChecked);
-    	        if (isChecked) {
-    	            dataTableInstance.rows().select();
-    	        } else {
-    	            dataTableInstance.rows().deselect();
-    	        }
-    	    });
+    	  $('#selectAll').off('change').on('change', function () {
+    	    if (this.checked) {
+    	      dataTableInstance.rows().select();
+    	    } else {
+    	      dataTableInstance.rows().deselect();
+    	    }
+    	  });
 
-    	    $(document).on('change', '.rowCheckbox', function () {
-    	        const row = $(this).closest('tr');
-    	        if (this.checked) {
-    	            dataTableInstance.row(row).select();
-    	        } else {
-    	            dataTableInstance.row(row).deselect();
-    	        }
-    	    });
+    	  dataTableInstance.on('select deselect', function () {
+    	    const allRows = dataTableInstance.rows().count();
+    	    const selectedRows = dataTableInstance.rows({ selected: true }).count();
+    	    $('#selectAll').prop('checked', allRows === selectedRows && allRows > 0);
+    	    $('#selectAll').prop('indeterminate', selectedRows > 0 && selectedRows < allRows);
+    	  });
     	}
-
 
       function renderNoResults() {
         if (dataTableInstance) {
@@ -316,71 +311,65 @@
         $resultsBody.empty();
         $tableHeaderRow.empty();
       }
+
       $('#cancelBtn').on('click', function() {
           window.close();  
-        });
-   
-      $('#okBtn').on('click', function () {
-    	    const selectedRows = [];
-    	    $('.rowCheckbox:checked').each(function () {
-    	        var rowId = $(this).data('id');
-    	        var rowData = dataTableInstance.row($(this).closest('tr')).data();
-
-    	        if (rowId && rowData) {
-    	            selectedRows.push({
-    	                name: rowData.name,
-    	                type: rowData.type,
-    	                objectid: rowData.objectid
-    	            });
-    	        }
-    	    });
-
-    	    function checkRows(selectedRows) {
-    	        if (selectedRows.length === 0) {
-    	            alert('No rows selected.');
-    	            return;
-    	        }
-    	    }
-
-    	    var sourceObjectId = new URLSearchParams(window.location.search).get('name');
-    	    if (!sourceObjectId) {
-    	        alert('Object ID is missing.');
-    	        return;
-    	    }
-
-    	    var requestData = {
-    	        partcontrol: selectedRows
-    	    };
-
-    	    $.ajax({
-    	        url: 'http://localhost:8080/andromeda/api/searchdata/popupsearch/' + sourceObjectId,
-    	        method: 'POST',
-    	        contentType: 'application/json',
-    	        data: JSON.stringify(requestData),
-    	        success: function(response) {
-    	            if (response.connectionid) {
-    	                alert('Connection Created Successfully with ID: ' + response.connectionid);
-    	                if (window.opener && !window.opener.closed && typeof window.opener.receiveSelectedParts === 'function') {
-    	                    window.opener.receiveSelectedParts(selectedRows);  
-    	                }
-    	                window.close();
-    	            } else {
-    	                alert('Failed to create connection.');
-    	            }
-    	        },
-    	        error: function(xhr, status, error) {
-    	            var msg = 'Error creating connection: ';
-    	            if (xhr.responseJSON && xhr.responseJSON.error) {
-    	                msg += xhr.responseJSON.error;
-    	            } else {
-    	                msg += error;
-    	            }
-    	            alert(msg);
-    	        }
-    	    });
-    	});
-
       });
+
+      $('#okBtn').on('click', function () {
+    	  const selectedRows = [];
+
+    	  dataTableInstance.rows({ selected: true }).every(function () {
+    	    const rowData = this.data();  // This is now the full object, not just array
+    	    selectedRows.push(rowData);
+    	  });
+
+    	  console.log('Selected Rows Count:', selectedRows.length);
+    	  console.log('Selected Rows:', selectedRows);
+
+    	  if (selectedRows.length === 0) {
+    	    alert('No rows selected.');
+    	    return;
+    	  }
+
+    	  const sourceObjectId = new URLSearchParams(window.location.search).get('name');
+    	  if (!sourceObjectId) {
+    	    alert('Object ID is missing.');
+    	    return;
+    	  }
+
+    	  const requestData = selectedRows;
+
+    	  console.log('Request Data:', requestData);
+
+    	  $.ajax({
+    	    url: 'http://localhost:8080/andromeda/api/searchdata/popupsearch/' + sourceObjectId,
+    	    method: 'POST',
+    	    contentType: 'application/json',
+    	    data: JSON.stringify(requestData),
+    	    success: function (response) {
+    	      if (response.connectionid) {
+    	        alert('Connection Created Successfully with ID: ' + response.connectionid);
+    	        if (window.opener && !window.opener.closed) {
+    	          window.opener.postMessage({ action: 'closeAndRefresh' }, "*");
+    	          window.close();
+    	        }
+    	      } else {
+    	        alert('Failed to create connection.');
+    	      }
+    	    },
+    	    error: function (xhr, status, error) {
+    	      var msg = 'Error creating connection: ';
+    	      if (xhr.responseJSON && xhr.responseJSON.error) {
+    	        msg += xhr.responseJSON.error;
+    	      } else {
+    	        msg += error;
+    	      }
+    	      alert(msg);
+    	    }
+    	  });
+    	});
+    });
   </script>
 </body>
 </html>

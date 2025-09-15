@@ -58,7 +58,7 @@
     display: flex;
     gap: 10px;
     width: 100%;
-    align-items: center;
+    align-items: center; 
   }
 
   .input-field input {
@@ -85,6 +85,7 @@
   }
 
   .text-area-container {
+    position: relative; /* Needed for overlay positioning */
     flex-grow: 1;
     display: flex;
     flex-direction: column;
@@ -102,6 +103,23 @@
     font-family: "Sitka Subheading Semibold", sans-serif;
     box-sizing: border-box;
     flex-grow: 1;
+  }
+
+  #loadingSpinnerOverlay {
+    display: none;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #loadingSpinnerOverlay img {
+    width: 48px;
+    height: 48px;
   }
 
   #fileViewer {
@@ -124,6 +142,7 @@
     position: relative;
     height: 100%;
     box-sizing: border-box;
+     resizable:horizontal;
   }
 
   #closeMark {
@@ -161,139 +180,168 @@
   #refreshPage:hover {
     color: #3f70ff;
   }
- .header-row {
-  text-align: center;
-  margin-bottom: 10px;
-}
+  .header-row {
+    text-align: center;
+    margin-bottom: 10px;
+  }
 
-.header-row h1 {
-  font-size: 24px;
-  margin: 0 auto;
-}
+  .header-row h1 {
+    font-size: 24px;
+    margin: 0 auto;
+  }
 
+  .section-label {
+    font-weight: bold;
+    font-size: 14px;
+    margin: 10px 0 5px 0;
+    color: #333;
+  }
+ <div id="loadingSpinnerOverlay" style="display:none;">
+  <img src="images/spinner.gif" alt="Loading..." />
+</div>
 
-.section-label {
-  font-weight: bold;
-  font-size: 14px;
-  margin: 10px 0 5px 0;
-  color: #333;
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
-  
 
   </style>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
   <script>var loggedInUserAccess = '<%= userAccess.trim() %>';</script>
 </head>
 <body>
   <div class="container">
-<div class="main-panel">
-  <div class="header-row">
-    <h1>Run ASQL</h1>
-  </div>
-  <div class="section-label">SQL Command</div>
-  <div class="input-field">
-    <input type="text" id="inputField" placeholder="Enter the query...">
-    <button id="submitBtn">Run</button>
-    <span id="queriesDoc">Help</span>
-    <img id="refreshPage" src="https://img.icons8.com/?size=100&id=t7r2A42vsY6O&format=png&color=000000" alt="Refresh" title="Refresh" style="margin-left: 10px; cursor: pointer; width: 20px; height: 20px;">
-  </div>
-  <div class="section-label">Results</div>
-  <div class="text-area-container">
-    <textarea id="textArea" placeholder="Query result...." readonly oncontextmenu="return false;"></textarea>
-  </div>
-</div>
-
+    <div class="main-panel">
+      <div class="header-row">
+        <h1>Run ASQL</h1>
+      </div>
+      <div class="section-label">SQL Command</div>
+      <div class="input-field">
+        <input type="text" id="inputField" placeholder="Enter the query..." />
+        <button id="submitBtn">Run</button>
+        <span id="queriesDoc">Help</span>
+        <img
+          id="refreshPage"
+          src="https://img.icons8.com/?size=100&id=t7r2A42vsY6O&format=png&color=000000"
+          alt="Refresh"
+          title="Refresh"
+          style="margin-left: 10px; cursor: pointer; width: 20px; height: 20px;"
+        />
+      </div>
+      <div class="section-label">Results</div>
+      <div class="text-area-container">
+        <textarea id="textArea" placeholder="Query result...." readonly oncontextmenu="return false;"></textarea>
+        <!-- Spinner overlay -->
+     <div id="loadingSpinnerOverlay" style="display:none;">
+  		<img src="spinner.gif" alt="Loading..." />
+	</div>
+      </div>
+    </div>
     <div id="fileViewer">
       <div id="fileViewerContent">
         <button id="closeMark">Close</button>
-        <pre id="fileTextContent" style="white-space: pre-wrap; margin-top: 10px;"></pre>
+        <pre
+          id="fileTextContent"
+          style="white-space: pre-wrap; margin-top: 10px;"
+        ></pre>
       </div>
     </div>
-  </div>
+</div>
   <script>
-    var loggedInUserAccess = '<%= userAccess.trim() %>';
+    var loggedInUserAccess = "<%= userAccess.trim() %>";
     $(document).ready(function () {
       function runQuery(query) {
+        $("#loadingSpinnerOverlay").show();
+
+        const minSpinnerTime = 5000; 
+        const spinnerStartTime = Date.now();
+
         $.ajax({
-          url: 'http://localhost:8080/andromeda/api/datafetchservice/executequery',
-          type: 'GET',
-          data: {
-            sql: query,
-            _: new Date().getTime()
-          },
+          url: "http://localhost:8080/andromeda/api/datafetchservice/executequery",
+          type: "GET",
+          data: { sql: query, _: new Date().getTime() },
           success: function (response) {
-            let resultText;
-            if (typeof response === 'object') {
-              resultText = JSON.stringify(response, null, 2);
-            } else if (typeof response === 'string') {
-              resultText = response.trim();
-            }
-            if (resultText) {
-              $('#textArea').val(resultText);
-            } else {
-              $('#textArea').val("No data found for the given query.");
-            }
+            let resultText =
+              typeof response === "object"
+                ? JSON.stringify(response, null, 2)
+                : response.trim();
+
+            runQuery.resultText = resultText || "No data found for the given query.";
           },
-          error: function (xhr, status, error) {
-            var errorMessage = "Error executing query.";
+          error: function (xhr) {
+            let errorMessage = "Error executing query.";
             if (xhr.responseJSON && xhr.responseJSON.error) {
               errorMessage = "Error: " + xhr.responseJSON.error;
             }
-            $('#textArea').val(errorMessage);
-            setTimeout(function () {
-              $('#textArea').val('');
-            }, 5000);
-          }
+            runQuery.resultText = errorMessage;
+
+            setTimeout(() => $("#textArea").val(""), 5000);
+          },
+          complete: function () {
+            const elapsed = Date.now() - spinnerStartTime;
+            const remaining = minSpinnerTime - elapsed;
+
+            if (remaining > 0) {
+              setTimeout(() => {
+                $("#loadingSpinnerOverlay").hide();
+                $("#textArea").val(runQuery.resultText);
+              }, remaining);
+            } else {
+              $("#loadingSpinnerOverlay").hide();
+              $("#textArea").val(runQuery.resultText);
+            }
+          },
         });
       }
-      $('#submitBtn').click(function () {
-        var query = $('#inputField').val().trim();
-        if (query) {
-          runQuery(query);
-        } else {
-          alert("Please enter a query.");
-        }
+
+      $("#submitBtn").click(() => {
+        const query = $("#inputField").val().trim();
+        if (query) runQuery(query);
+        else alert("Please enter a query.");
       });
-      $('#inputField').keypress(function (event) {
+
+      $("#inputField").keypress((event) => {
         if (event.which === 13) {
-          var query = $('#inputField').val().trim();
-          if (query) {
-            runQuery(query);
-          } else {
-            alert("Please enter a query.");
-          }
+          event.preventDefault();
+          const query = $("#inputField").val().trim();
+          if (query) runQuery(query);
+          else alert("Please enter a query.");
         }
       });
-      $('#queriesDoc').click(function () {
+
+      $("#queriesDoc").click(function () {
         $.ajax({
-          url: '/andromeda/queries.txt',
-          type: 'GET',
+          url: "/andromeda/queries.txt",
+          type: "GET",
           success: function (data) {
-            $('#fileTextContent').text(data);
-            $('#fileViewer').show();
+            $("#fileTextContent").text(data);
+            $("#fileViewer").show();
           },
           error: function (xhr, status, error) {
-            $('#fileTextContent').text("Error loading the document.");
-            $('#fileViewer').show();
-          }
+            $("#fileTextContent").text("Error loading the document.");
+            $("#fileViewer").show();
+          },
         });
       });
-      $('#closeMark').click(function () {
-        $('#fileViewer').hide();
+
+      $("#closeMark").click(function () {
+        $("#fileViewer").hide();
       });
-      $('#fileViewer').click(function (event) {
+
+      $("#fileViewer").click(function (event) {
         if (event.target === this) {
           $(this).hide();
         }
       });
-      $('#refreshPage').click(function () {
-        $('#inputField').val('');
-        $('#textArea').val('');
-        $('#fileViewer').hide();
+
+      $("#refreshPage").click(function () {
+        $("#inputField").val("");
+        $("#textArea").val("");
+        $("#fileViewer").hide();
       });
     });
   </script>
