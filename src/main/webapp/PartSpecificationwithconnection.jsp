@@ -175,7 +175,7 @@
 		        const result = await res.json();
 		        if (!res.ok || result.error) {
 		            if (result.error && result.error.includes("already exists")) {
-		                alert(`Error: ${result.error}`);
+		            	alert('Error: ' + errorMessage);
 		            } else {
 		                alert('Error: ' + (result.error || 'Failed to create part specification'));
 		            }

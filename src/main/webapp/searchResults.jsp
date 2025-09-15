@@ -70,23 +70,23 @@ color: blue;
 text-decoration: underline;
 }
 .noResults {
-display: none;                    
-text-align: center;               
-position: absolute;              
-bottom: 70px;                     
-left: 50%;                         
-transform: translateX(-50%);     
-font-size: 18px;                 
-color: #555;                      
-background-color: transparent;    
-border: none;                     
-box-shadow: none;                
-padding: 0;                       
-margin: 0;                       
-width: auto;                      
-max-width: 90%;                   
+  display: none;
+  position: fixed; 
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); 
+  text-align: center;
+  font-size: 18px;
+  color: #555;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  width: auto;
+  max-width: 90%;
+  z-index: 10000; 
 }
-
 .noResults ul {
 list-style: none;
 padding: 0;
@@ -123,7 +123,19 @@ background-color: #f8f9fa;
 }
 
 .tight-columns td, .tight-columns th {
-    padding: 4px 8px !important; /* reduce padding */
+    padding: 2px 4px !important; /* reduce padding */
+}
+#resultsTable {
+    border-collapse: collapse !important;
+    table-layout: auto;
+}
+
+#resultsTable thead th {
+    padding: 2px 8px !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    vertical-align: middle !important;
+    height: 28px !important;
 }
 
 </style>
@@ -180,7 +192,6 @@ background-color: #f8f9fa;
         const contextMenu = document.getElementById('contextMenu');
         const noResultsDiv = document.getElementById('noResults'); 
         let selectedObjectId = null;
-
         function showLoading(show) {
             const spinnerOverlay = document.getElementById('spinnerOverlay');
             const loadingText = document.getElementById('loadingText');
@@ -192,7 +203,6 @@ background-color: #f8f9fa;
                 loadingText.style.display = 'none';
             }
         }
-
         function showError(msg) {
             errorMessage.textContent = msg;
             errorMessage.style.display = 'block';
@@ -207,46 +217,52 @@ background-color: #f8f9fa;
             return /^\d+$/.test(query);
         }
 
-       if (!query) {
+        if (!query) {
             showError("Please enter a search value.");
             return;
         }
 
-       if (filter === "all") {
-           if (!isValidPartNumber(query)) {
-               showError("Please enter a valid part number (e.g., 300, 300-001, 300-001-APN).");
-               return;
-           }
-       } else if (filter === "byparts") {
-    	   if (isOnlyNumbers(query)) {
-    	        showError("Please enter a valid part name, not just a number.");
-    	        return;
-    	    }
-           if (query.length < 2) {
-               showError("Please enter at least 2 characters for part name.");
-               return;
-           }
-       } else {
-           if (query.length < 2) {
-               showError("Please enter at least 2 characters.");
-               return;
-           }
-       }
+        const searchQuery = query.trim().toLowerCase();
+
+        if (filter === "all") {
+            const isNumericLike = /^[0-9]+(-[0-9]*)?$/.test(searchQuery);
+            const isAlphaLike = /^[a-z]+(-[a-z0-9]*)?$/.test(searchQuery);
+            
+            if (!isNumericLike && !isAlphaLike) {
+                showError("Invalid input format. Use values like '900', '900-001', 'pc', or 'pc-000'.");
+                return;
+            }
+            if (searchQuery.length < 2) {
+                showError("Please enter at least 2 characters.");
+                return;
+            }
+        } else if (filter === "byparts") {
+            if (isOnlyNumbers(searchQuery)) {
+                showError("Please enter a valid part name, not just a number.");
+                return;
+            }
+            if (searchQuery.length < 2) {
+                showError("Please enter at least 2 characters for part name.");
+                return;
+            }
+        } else {
+            if (searchQuery.length < 2) {
+                showError("Please enter at least 2 characters.");
+                return;
+            }
+        }
         try {
             showLoading(true);
             errorMessage.style.display = 'none';
             resultsTable.hide();
             noResultsDiv.style.display = 'none';  
-
             const formData = new URLSearchParams();
             formData.append("name", query);
             formData.append("filter", filter);
-
             const response = await fetch("http://localhost:8080/andromeda/api/navigatorutilites/amxfullsearch?" + formData.toString(), {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });
-
             if (!response.ok) {
                 if (response.status === 404) {
                     renderNoResults();
@@ -257,9 +273,7 @@ background-color: #f8f9fa;
                     throw new Error(errText);
                 }
             }
-
             const data = await response.json();
-
             if (data.Status === "Success" && Array.isArray(data.Results) && data.Results.length > 0) {
                 renderResults(data.Results);
             } else {
@@ -271,24 +285,30 @@ background-color: #f8f9fa;
         } finally {
             showLoading(false);
         }
-
         function renderResults(results) {
             resultsTable.show();
             noResultsDiv.style.display = 'none';
             errorMessage.style.display = 'none';
             resultsBody.innerHTML = '';
             tableHeaderRow.innerHTML = '';
-            const headerMap = {
-                "APN": "apn",
-                "Name": "name",
-                "SuperType": "supertype",
-                "Type": "type",
-                "Description": "description",
-                "CreatedDate": "createddate",
-                "Owner": "owner",
-                "Email": "email"
-            };
 
+            let headerMap;
+            if (searchQuery === 'pc' || searchQuery === 'pc-' || searchQuery === 'pc-000') {
+                headerMap = {"Name": "name","SuperType": "supertype","Type": "type","Description": "description",
+                    "Createddate": "createddate","Owner": "owner","Email": "email","Assignee": "assignee","Currentstate": "currentstate"
+                };
+            } else if (filter === "byPersons") {
+                headerMap = {"Username": "username","First Name": "firstname","Last Name": "lastname","Country": "country",
+                    "Email": "email","Access": "access"
+                };
+            } else if (filter === "byParts") {
+                headerMap = {"APN": "apn","Name": "name","SuperType": "supertype","Type": "type","Description": "description"
+                };
+            } else {
+                headerMap = {"APN": "apn","Name": "name","SuperType": "supertype","Type": "type","Description": "description",
+                    "CreatedDate": "createddate","Owner": "owner","Email": "email"
+                };
+            }
             Object.keys(headerMap).forEach(header => {
                 const th = document.createElement('th');
                 th.textContent = header;
@@ -314,7 +334,25 @@ background-color: #f8f9fa;
                         a.classList.add('apn-link');
                         a.textContent = item[key] != null ? item[key] : '';
                         a.setAttribute('ObjectId', item.objectid);
+                        a.setAttribute('data-type', 'apn');
                         td.appendChild(a);
+                    } else if (header === 'Name' && (searchQuery === 'pc' || searchQuery === 'pc-' || searchQuery === 'pc-000')) {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.classList.add('apn-link');
+                        a.textContent = item[key] != null ? item[key] : '';
+                        a.setAttribute('ObjectId', item.objectid);
+                        a.setAttribute('data-type', 'pc-name');
+                        td.appendChild(a);
+                    } else if (header === 'Username' && filter === 'byPersons') {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.classList.add('apn-link');
+                        a.textContent = item[key] != null ? item[key] : '';
+                        a.setAttribute('ObjectId', item.objectid);
+                        a.setAttribute('data-type', 'person-username');
+                        td.appendChild(a);
+
                     } else {
                         td.textContent = item[key] != null ? item[key] : '';
                     }
@@ -331,6 +369,7 @@ background-color: #f8f9fa;
                 ordering: false
             });
         }
+
         function renderNoResults() {
             resultsTable.hide();
             noResultsDiv.style.display = 'block'; 
@@ -351,9 +390,15 @@ background-color: #f8f9fa;
                 e.stopPropagation();
                 selectedObjectId = e.target.getAttribute('ObjectId');
                 if (!selectedObjectId) return;
+
+                // Show context menu at mouse position
                 contextMenu.style.top = e.pageY + 'px';
                 contextMenu.style.left = e.pageX + 'px';
                 contextMenu.style.display = 'block';
+
+                // Store selected id and type for use on menu click
+                contextMenu.setAttribute('data-selected-objectid', selectedObjectId);
+                contextMenu.setAttribute('data-selected-type', e.target.getAttribute('data-type'));
             } else if (!contextMenu.contains(e.target)) {
                 contextMenu.style.display = 'none';
             }
@@ -361,10 +406,21 @@ background-color: #f8f9fa;
 
         document.getElementById('openMenuItem').addEventListener('click', function() {
             contextMenu.style.display = 'none';
-            if (selectedObjectId) {
-                const propertiesUrl = '/andromeda/Properties.jsp?name=' + encodeURIComponent(selectedObjectId);
-                window.location.href = propertiesUrl;
+            const objectId = contextMenu.getAttribute('data-selected-objectid');
+            const type = contextMenu.getAttribute('data-selected-type');
+            if (!objectId) return;
+            let propertiesUrl = '';
+            if (type === 'apn') {
+                propertiesUrl = '/andromeda/Properties.jsp?name=' + encodeURIComponent(objectId);
+            } else if (type === 'pc-name') {
+                propertiesUrl = '/andromeda/Partcontroldetails.jsp?name=' + encodeURIComponent(objectId);
+            } else if (type === 'person-username') {
+                propertiesUrl = '/andromeda/PersonProperties.jsp?name=' + encodeURIComponent(objectId);
+            } else {
+                propertiesUrl = '/andromeda/Properties.jsp?name=' + encodeURIComponent(objectId);
             }
+
+            window.location.href = propertiesUrl;
         });
     });
 </script>

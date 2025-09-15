@@ -8,8 +8,10 @@ import org.json.JSONObject;
 
 import java.sql.*;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.security.SecureRandom;
 
@@ -230,61 +232,103 @@ public class NavigatorUtilites {
     @Produces(MediaType.APPLICATION_JSON)
     public Response search(@QueryParam("name") String name, @QueryParam("filter") String filter) {
         JSONObject resp = new JSONObject();
+
         if (filter == null || filter.trim().isEmpty()) {
             filter = "all";
         }
-
         try (Connection conn = DriverManager.getConnection(url, user, db_password)) {
             JSONArray results = new JSONArray();
-            PreparedStatement ps;
-            String sql;
             if ("byparts".equalsIgnoreCase(filter)) {
                 if (name == null || name.trim().isEmpty()) {
                     resp.put("Status", "Failed").put("Message", "Part name is required for 'byParts'.");
                     return Response.status(Response.Status.BAD_REQUEST).entity(resp.toString()).build();
                 }
-                sql = "SELECT * FROM amxcorepartdata WHERE fts_document @@ to_tsquery(?)";
-                ps = conn.prepareStatement(sql);
-                ps.setString(1, name.toLowerCase() + ":*");
-            }
-            else if ("bypersons".equalsIgnoreCase(filter)) {
+                String sql = "SELECT * FROM amxcorepartdata WHERE fts_document @@ to_tsquery(?)";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, name.toLowerCase() + ":*");
+                    try (ResultSet rs = ps.executeQuery()) {
+                        ResultSetMetaData meta = rs.getMetaData();
+                        while (rs.next()) {
+                            JSONObject obj = new JSONObject();
+                            for (int i = 1; i <= meta.getColumnCount(); i++) {
+                                obj.put(meta.getColumnName(i), rs.getString(i));
+                            }
+                            results.put(obj);
+                        }
+                    }
+                }
+            } else if ("bypersons".equalsIgnoreCase(filter)) {
                 if (name == null || name.trim().isEmpty()) {
                     resp.put("Status", "Failed").put("Message", "Person name is required for 'byPersons'.");
                     return Response.status(Response.Status.BAD_REQUEST).entity(resp.toString()).build();
                 }
-                sql = "SELECT * FROM amxcorepartdata WHERE owner ILIKE ?";
-                ps = conn.prepareStatement(sql);
-                ps.setString(1, "%" + name + "%"); 
-            } else if ("all".equalsIgnoreCase(filter)) {
-                sql = "SELECT * FROM amxcorepartdata WHERE fts_document @@ to_tsquery(?)";
-                ps = conn.prepareStatement(sql);
-                ps.setString(1, name + ":*");
-                try (ResultSet rs = ps.executeQuery()) {
-                    ResultSetMetaData meta = rs.getMetaData();
-                    while (rs.next()) {
-                        JSONObject obj = new JSONObject();
-                        for (int i = 1; i <= meta.getColumnCount(); i++) {
-                            obj.put(meta.getColumnName(i), rs.getString(i));
+                String sql = "SELECT * FROM amxcorepersondata WHERE fts_document @@ to_tsquery(?)";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, name.toLowerCase() + ":*");
+                    try (ResultSet rs = ps.executeQuery()) {
+                        ResultSetMetaData meta = rs.getMetaData();
+                        while (rs.next()) {
+                            JSONObject obj = new JSONObject();
+                            for (int i = 1; i <= meta.getColumnCount(); i++) {
+                                obj.put(meta.getColumnName(i), rs.getString(i));
+                            }
+                            results.put(obj);
                         }
-                        results.put(obj);
                     }
                 }
-                sql = "SELECT * FROM amxcorepersondata WHERE fts_document @@ to_tsquery(?)";
-                ps = conn.prepareStatement(sql);
-                ps.setString(1, name + ":*");
-            } else {
+            } else if ("all".equalsIgnoreCase(filter)) {
+                if (name == null || name.trim().isEmpty()) {
+                    resp.put("Status", "Failed").put("Message", "Search term is required for 'all'.");
+                    return Response.status(Response.Status.BAD_REQUEST).entity(resp.toString()).build();
+                }
+
+                String searchTerm = name.trim().toLowerCase();
+
+                // Updated pattern for numeric part numbers like 900, 900-001
+                if (searchTerm.matches("^[0-9]+(-[0-9]*)?$")) {
+                    String sql = "SELECT * FROM amxcorepartdata WHERE fts_document @@ to_tsquery(?)";
+                    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                        ps.setString(1, searchTerm + ":*");
+                        try (ResultSet rs = ps.executeQuery()) {
+                            ResultSetMetaData meta = rs.getMetaData();
+                            while (rs.next()) {
+                                JSONObject obj = new JSONObject();
+                                for (int i = 1; i <= meta.getColumnCount(); i++) {
+                                    obj.put(meta.getColumnName(i), rs.getString(i));
+                                }
+                                results.put(obj);
+                            }
+                        }
+                    }
+                } else {
+                	String[] parts = searchTerm.split("[^a-zA-Z0-9]+");
+                	List<String> tsParts = new ArrayList<>();
+                	for (String part : parts) {
+                	    if (!part.trim().isEmpty()) {
+                	        tsParts.add(part + ":*");
+                	    }
+                	}
+                	String tsQuery = String.join(" & ", tsParts);
+                    String sql = "SELECT * FROM amxpartcontroldata WHERE fts_document @@ to_tsquery(?)";
+                    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                        ps.setString(1, tsQuery);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            ResultSetMetaData meta = rs.getMetaData();
+                            while (rs.next()) {
+                                JSONObject obj = new JSONObject();
+                                for (int i = 1; i <= meta.getColumnCount(); i++) {
+                                    obj.put(meta.getColumnName(i), rs.getString(i));
+                                }
+                                results.put(obj);
+                            }
+                        }
+                    }
+                }
+            }
+
+            else {
                 resp.put("Status", "Failed").put("Message", "Invalid filter value.");
                 return Response.status(Response.Status.BAD_REQUEST).entity(resp.toString()).build();
-            }
-            try (ResultSet rs = ps.executeQuery()) {
-                ResultSetMetaData meta = rs.getMetaData();
-                while (rs.next()) {
-                    JSONObject obj = new JSONObject();
-                    for (int i = 1; i <= meta.getColumnCount(); i++) {
-                        obj.put(meta.getColumnName(i), rs.getString(i));
-                    }
-                    results.put(obj);
-                }
             }
             resp.put("Status", "Success").put("Results", results);
             return Response.ok(resp.toString(), MediaType.APPLICATION_JSON).build();
@@ -295,8 +339,6 @@ public class NavigatorUtilites {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(resp.toString()).build();
         }
     }
-
-
 //latestpart
     @POST
     @Path("/latest")
