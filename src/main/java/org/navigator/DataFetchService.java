@@ -1,5 +1,6 @@
 package org.navigator;
 
+import java.io.ByteArrayInputStream;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.sql.*;
@@ -16,6 +17,7 @@ import jakarta.ws.rs.core.Response.Status;
 import amd.Person;
 import amd.AmxQueryFromDB;
 import amd.AmxSchemasrules;
+import amd.AmxSpecificationDocument;
 @Path("/datafetchservice")
 public class DataFetchService {
     public static final String url = "jdbc:postgresql://localhost:5432/Andromeda";
@@ -996,23 +998,18 @@ public class DataFetchService {
         @GET
         @Path("/getcreatedpartcontrol")
         @Produces(MediaType.APPLICATION_JSON)
-        public Response getPartControlsByObjectId(@QueryParam("objectid") String objectid) {
+        public Response getPartControlByObjectId(@QueryParam("objectid") String objectid) {
             if (objectid == null || objectid.trim().isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity("{\"error\":\"objectid query parameter is required\"}")
-                        .build();
+                return Response.ok("{\"error\":\"objectid query parameter is required\"}").build();
             }
             String sql = "SELECT * FROM amxpartcontroldata WHERE linkedobjectid = ? ORDER BY createddate DESC";
             List<Map<String, String>> results = new ArrayList<>();
-
             try (Connection conn = getConn();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setString(1, objectid.trim());
-
                 try (ResultSet rs = pstmt.executeQuery()) {
                     ResultSetMetaData metaData = rs.getMetaData();
                     int colCount = metaData.getColumnCount();
-
                     while (rs.next()) {
                         Map<String, String> row = new LinkedHashMap<>();
                         for (int i = 1; i <= colCount; i++) {
@@ -1022,16 +1019,12 @@ public class DataFetchService {
                     }
                 }
                 if (results.isEmpty()) {
-                    return Response.ok("{\"message\":\"No part controls found.\"}").build();
+                    return Response.ok("{\"message\":\"No PartControl data found.\"}").build();
                 }
-
                 return Response.ok(results).build();
-
             } catch (SQLException e) {
                 e.printStackTrace();
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                        .entity("{\"error\":\"" + e.getMessage() + "\"}")
-                        .build();
+                return Response.ok("{\"error\":\"" + e.getMessage() + "\"}").build();
             }
         }
 
@@ -1554,63 +1547,67 @@ public class DataFetchService {
             @Produces(MediaType.APPLICATION_JSON)
             public Response getPartSpecificationByObjectId(@QueryParam("objectid") String objectid) {
                 if (objectid == null || objectid.trim().isEmpty()) {
-                    return Response.status(Response.Status.BAD_REQUEST)
-                            .entity(Map.of("error", "objectid query parameter is required")).build();
+                    return Response.ok("{\"error\":\"objectid query parameter is required\"}").build();
                 }
-
+                String sql = "SELECT * FROM amxpartspecificationdata WHERE linkedobjectid = ? ORDER BY createdtime DESC";
                 List<Map<String, String>> results = new ArrayList<>();
-
-                try (Connection conn = getConn()) {
-
-                    // 1. Fetch data from amxpartspecificationdata
-                    String specSql = "SELECT * FROM amxpartspecificationdata WHERE linkedobjectid = ? ORDER BY createdtime DESC";
-                    try (PreparedStatement pstmt = conn.prepareStatement(specSql)) {
-                        pstmt.setString(1, objectid.trim());
-                        try (ResultSet rs = pstmt.executeQuery()) {
-                            ResultSetMetaData metaData = rs.getMetaData();
-                            int colCount = metaData.getColumnCount();
-                            while (rs.next()) {
-                                Map<String, String> row = new LinkedHashMap<>();
-                                for (int i = 1; i <= colCount; i++) {
-                                    row.put(metaData.getColumnName(i), rs.getString(i));
-                                }
-                                row.put("source", "Specification");  
-                                results.add(row);
+                try (Connection conn = getConn();
+                     PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setString(1, objectid.trim());
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        ResultSetMetaData metaData = rs.getMetaData();
+                        int colCount = metaData.getColumnCount();
+                        while (rs.next()) {
+                            Map<String, String> row = new LinkedHashMap<>();
+                            for (int i = 1; i <= colCount; i++) {
+                                row.put(metaData.getColumnName(i), rs.getString(i));
                             }
+                            results.add(row);
                         }
                     }
-
-                    // 2. Fetch connected parts from amxcoreconnectiondata
-                    String connSql = "SELECT * FROM amxcoreconnectiondata WHERE toid = ? AND fromname = 'partcontrol'";
-                    try (PreparedStatement pstmt = conn.prepareStatement(connSql)) {
-                        pstmt.setString(1, objectid.trim());
-                        try (ResultSet rs = pstmt.executeQuery()) {
-                            ResultSetMetaData metaData = rs.getMetaData();
-                            int colCount = metaData.getColumnCount();
-                            while (rs.next()) {
-                                Map<String, String> row = new LinkedHashMap<>();
-                                for (int i = 1; i <= colCount; i++) {
-                                    row.put(metaData.getColumnName(i), rs.getString(i));
-                                }
-                                row.put("source", "Connection"); 
-                                results.add(row);
-                            }
-                        }
-                    }
-
                     if (results.isEmpty()) {
-                        return Response.ok(Map.of("message", "No part specifications or connections found.")).build();
+                        return Response.ok("{\"message\":\"No partSpecifications found.\"}").build();
                     }
-
                     return Response.ok(results).build();
-
                 } catch (SQLException e) {
                     e.printStackTrace();
-                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                            .entity(Map.of("error", e.getMessage())).build();
+                    return Response.ok("{\"error\":\"" + e.getMessage() + "\"}").build();
                 }
             }
-
+            
+            // get addexistngpartspecification
+            @GET
+            @Path("/getaddexisting")
+            @Produces(MediaType.APPLICATION_JSON)
+            public Response getAddExistingData(@QueryParam("objectid") String objectid) {
+            	if(objectid==null || objectid.trim().isEmpty()) {
+            		return Response.ok("{\"error\":\"objectid query parameter is required\"}").build();
+            	}
+                String sql = "SELECT * FROM amxcoreconnectiondata WHERE toid = ? AND (fromname = 'PartControl' OR fromname = 'partSpecification') ORDER BY createddate DESC";
+                List<Map<String, String>> result = new ArrayList<>();
+                try (Connection conn = getConn();
+                     PreparedStatement pstmt = conn.prepareStatement(sql)){
+                	pstmt.setString(1,objectid.trim());
+                	try(ResultSet rs=pstmt.executeQuery()){
+                		ResultSetMetaData resultsetmetadata=rs.getMetaData();
+                		int colCount=resultsetmetadata.getColumnCount();
+                		while(rs.next()) {
+                			Map<String,String> map=new LinkedHashMap<>();
+                			for(int i=1;i<=colCount;i++) {
+                				map.put(resultsetmetadata.getColumnName(i), rs.getString(i));
+                			}
+                			result.add(map);
+                		}
+                	}
+                	if(result.isEmpty()) {
+                		return Response.ok("{\"Message\":\"No Part Control or PartSpecification data found.\"}").build();
+                	}
+                    return Response.ok(result).build();
+                } catch (SQLException e) {
+					e.printStackTrace();
+	                return Response.ok("{\"error\":\"" + e.getMessage() + "\"}").build();            	
+				}
+            }
             
         // QueryFromDB
             @GET
@@ -1661,6 +1658,55 @@ public class DataFetchService {
                     return Response.serverError().entity("Error: " + e.getMessage()).build();
                 }
             }
+            
+            //get uploaded files
+            @GET
+            @Path("/getUploadedFiles")
+            @Produces(MediaType.APPLICATION_JSON)
+            public Response getUploadedFiles(@QueryParam("objectid") String objectid) {
+                try {
+                    if (objectid == null || objectid.trim().isEmpty()) {
+                        return Response.status(Response.Status.BAD_REQUEST)
+                                .entity("Missing objectid").build();
+                    }
+
+                    List<amd.AmxSpecificationDocument> documents = amd.AmxSpecificationDocument.getFilesByObjectId(objectid);
+                    javax.json.JsonArrayBuilder arrayBuilder = javax.json.Json.createArrayBuilder();
+
+                    for (amd.AmxSpecificationDocument doc : documents) {
+                        arrayBuilder.add(javax.json.Json.createObjectBuilder()
+                                .add("fileId", doc.fileid)
+                                .add("fileName", doc.filename));
+                    }
+
+                    return Response.ok(arrayBuilder.build().toString(), MediaType.APPLICATION_JSON).build();
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return Response.serverError().entity("Error: " + e.getMessage()).build();
+                }
+            }
+
+            //filedownload
+            @GET
+            @Path("/download")
+            @Produces(MediaType.APPLICATION_OCTET_STREAM)
+            public Response downloadFile(@QueryParam("objectid") String objectid,@QueryParam("fileName") String fileName) {
+                try {
+                    AmxSpecificationDocument doc = AmxSpecificationDocument.getFileObjectIdAndFileName(objectid, fileName);
+                    if (doc == null) {
+                        return Response.status(Response.Status.NOT_FOUND).entity("File not found").build();
+                    }
+                    return Response.ok(new ByteArrayInputStream(doc.filedata))
+                            .header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
+                            .build();
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return Response.serverError().entity("Download error: " + e.getMessage()).build();
+                }
+            }
+
 ///created part specification from PS
            @GET
             @Path("/getpartspecification")

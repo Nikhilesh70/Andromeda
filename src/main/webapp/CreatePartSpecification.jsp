@@ -132,50 +132,58 @@
 	  });
 
 	  form.addEventListener('submit', async (e) => {
-	    e.preventDefault();
+		    e.preventDefault();
 
-	    const formData = {
-	      SuperType: supertypeSelect.value.trim(),
-	      Type: typeSelect.value.trim(),
-	      ResponsibleEngineer: engineerInput.value.trim(),  
-	      Description: descriptionInput.value.trim()
-	    };
+		    const formData = {
+		        SuperType: supertypeSelect.value.trim(),
+		        Type: typeSelect.value.trim(),
+		        ResponsibleEngineer: engineerInput.value.trim(),
+		        Description: descriptionInput.value.trim()
+		    };
 
-	    if (!formData.SuperType || !formData.Type || !formData.Description) {
-	      alert('Please fill in all required fields.');
-	      return;
-	    }
+		    if (!formData.SuperType || !formData.Type || !formData.Description) {
+		        alert('Please fill in all required fields.');
+		        return;
+		    }
 
-	    try {
-	      const res = await fetch('http://localhost:8080/andromeda/api/datafetchservice/createpartspecification', {
-	        method: 'POST',
-	        headers: { 
-	          'Content-Type': 'application/x-www-form-urlencoded',
-	          'Accept': 'application/json'
-	        },
-	        credentials: 'include',
-	        body: new URLSearchParams(formData)
-	      });
+		    try {
+		        const res = await fetch('http://localhost:8080/andromeda/api/datafetchservice/createpartspecification', {
+		            method: 'POST',
+		            headers: { 
+		                'Content-Type': 'application/x-www-form-urlencoded',
+		                'Accept': 'application/json'
+		            },
+		            credentials: 'include',
+		            body: new URLSearchParams(formData)
+		        });
 
-	      const result = await res.json();
+		        const result = await res.json();
 
-	      if (!res.ok || result.Status !== 'Success') {
-	        alert('Error: ' + (result.Message || 'Something went wrong'));
-	        return;
-	      }
+		        if (!res.ok || result.Status !== 'Success') {
+		            alert('Error: ' + (result.Message || 'Something went wrong'));
+		            return;
+		        }
 
-	      alert('The following object was created successfully!\nSuperType: ' + formData.SuperType + '\nType: ' + formData.Type +
-	        '\nName: ' + result.Name);
+		        alert('The following object was created successfully!\nSuperType: ' + formData.SuperType + '\nType: ' + formData.Type +
+		              '\nName: ' + result.Name);
 
-	      if (isInIframe) {
-	        window.parent.postMessage({ action: 'closeAndRefresh' }, '*');
-	      } else {
-	        window.close();
-	      }
-	    } catch (error) {
-	      alert('Submission failed: ' + error.message);
-	    }
-	  });
+		        if (result.Name) {
+		            if (isInIframe) {
+		                window.parent.postMessage({
+		                    action: 'closeAndRefresh',
+		                    createdPartId: result.Name  
+		                }, '*');
+		            } else {
+		                window.close(); 
+		            }
+		        } else {
+		            alert('Could not retrieve the Name for the new part specification.');
+		        }
+
+		    } catch (error) {
+		        alert('Submission failed: ' + error.message);
+		    }
+		});
 	});
 </script>
 </body>

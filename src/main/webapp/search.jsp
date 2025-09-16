@@ -242,16 +242,25 @@
     	  } else {
     	    const type = results[0].type;
 
+    	    const isApnAvailable = results.some(result => result.hasOwnProperty('apn'));
+
     	    if (type === 'fastener') {
-    	      columnsToShow = ["name", "apn", "supertype", "type", "description", "createddate", "owner", "email", "fastenersubpart", "variant"];
+    	      if (isApnAvailable) {
+    	        columnsToShow = ["name", "apn", "supertype", "type", "description", "createddate", "owner", "email", "fastenersubpart", "variant"];
+    	      } else {
+    	        columnsToShow = ["name", "supertype", "type", "description", "createddate", "owner", "email", "fastenersubpart", "variant"];
+    	      }
     	    } else if (type === 'partcontrol') {
     	      columnsToShow = ["name", "supertype", "type", "description", "createddate", "owner", "email", "assignee"];
     	    } else {
-    	      columnsToShow = ["name", "apn", "supertype", "type", "description", "createddate", "owner", "email"];
+    	      if (isApnAvailable) {
+    	        columnsToShow = ["name", "apn", "supertype", "type", "description", "createddate", "owner", "email"];
+    	      } else {
+    	        columnsToShow = ["name", "supertype", "type", "description", "createddate", "owner", "email"];
+    	      }
     	    }
     	  }
 
-    	  // Build columns array for DataTable with data keys
     	  const dtColumns = [
     	    { data: null, defaultContent: '', className: 'select-checkbox', orderable: false }
     	  ].concat(columnsToShow.map(key => ({
@@ -260,7 +269,7 @@
     	  })));
 
     	  dataTableInstance = new DataTable('#example', {
-    	    data: results,  // pass the full object array directly here
+    	    data: results, 
     	    columns: dtColumns,
     	    columnDefs: [{
     	      orderable: false,
@@ -278,7 +287,6 @@
     	    ordering: true
     	  });
 
-    	  // Insert the select all checkbox header dynamically
     	  $tableHeaderRow.append('<th><input type="checkbox" id="selectAll" /></th>');
     	  columnsToShow.forEach(key => {
     	    $tableHeaderRow.append(`<th>${key.charAt(0).toUpperCase() + key.slice(1)}</th>`);
@@ -299,7 +307,7 @@
     	    $('#selectAll').prop('indeterminate', selectedRows > 0 && selectedRows < allRows);
     	  });
     	}
-
+      
       function renderNoResults() {
         if (dataTableInstance) {
           dataTableInstance.destroy();
@@ -320,7 +328,7 @@
     	  const selectedRows = [];
 
     	  dataTableInstance.rows({ selected: true }).every(function () {
-    	    const rowData = this.data();  // This is now the full object, not just array
+    	    const rowData = this.data();  
     	    selectedRows.push(rowData);
     	  });
 
