@@ -345,6 +345,13 @@ forn-wrap-mode:nowrap;
         white-space: nowrap;
         text-wrap-mode:nowrap;
     }
+    .section-label {
+    font-weight: bold;
+    font-size: 14px;
+    margin: 10px 0 5px 0;
+    color: #333;
+  }
+  
 </style>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -400,10 +407,10 @@ forn-wrap-mode:nowrap;
 
     <div id="loadingSpinner"></div>
     <div id="errorMessage" class="error"></div>
+        <div class="section-label">PartControlTable</div>
     <table class="table table-bordered mt-2" id="partControlTable">
     <thead>
         <tr>
-
         </tr>
     </thead>
     <tbody>
@@ -421,15 +428,13 @@ function receiveSelectedParts(selectedParts) {
         return; 
     }
     console.log("Received selected parts:", selectedParts);
-
-    const table = $('#partControlTable').DataTable();
-
+    let table = $('#partControlTable').DataTable();
     if (!table) {
         console.log("Table not initialized. Initializing...");
         loadPartControlTable();
+        setTimeout(() => receiveSelectedParts(selectedParts), 500);
         return;
     }
-
     selectedParts.forEach(part => {
         const columns = table.settings().init().columns;
         const newRowData = columns.map(col => part[col.data] || '');
@@ -438,9 +443,11 @@ function receiveSelectedParts(selectedParts) {
 
     $('#errorMessage').text('New parts added.');
 }
+
+
 function loadPartControlTable() {
     $('#errorMessage').text('Loading part controls...');
-
+    $('.section-label:contains("PartControlTable")').hide();
     const urlParams = new URLSearchParams(window.location.search);
     const objectid = urlParams.get('name');
 
@@ -456,42 +463,34 @@ function loadPartControlTable() {
         cache: false,
         success: function(data) {
             $('#errorMessage').text('');
-            if (!data || data.length === 0 || data.message) {
-                $('#errorMessage').text(data.message || 'No part controls found.');
+            
+            if (!data || !Array.isArray(data) || data.length === 0 || data.message) {
+                $('#errorMessage').text(data ? data.message || 'No part Control found.' : 'Error loading data.');
                 if ($.fn.DataTable.isDataTable('#partControlTable')) {
                     $('#partControlTable').DataTable().clear().draw();
                 }
-                return;
-            }
-            const filteredData = data.filter(item => item.currentstate !== undefined && item.currentstate !== null);
-            filteredData.forEach(item => {
-                if (!item.currentstate || item.currentstate.trim() === '') {
-                    item.currentstate = 'NA';
-                }
-            });
-            if (filteredData.length === 0) {
-                $('#errorMessage').text('No parts with current state found.');
-                if ($.fn.DataTable.isDataTable('#partControlTable')) {
-                    $('#partControlTable').DataTable().clear().draw();
-                }
+                $('.section-label:contains("PartControlTable")').hide();
+                $('#partControlTable').hide();
                 return;
             }
 
-            const keys = Object.keys(filteredData[0]);
-            const excludeKeys = ['objectid', 'connectionid', 'linkedobjectid', 'fts_document'];
-            const finalKeys = keys.filter(k => !excludeKeys.includes(k));
-            c
-            const columns = finalKeys.map(key => ({
-                data: key,
-                title: key.charAt(0).toUpperCase() + key.slice(1)
-            }));
+            $('.section-label:contains("PartControlTable")').show();
+            $('#partControlTable').show();
+            
+            const excludedFields = ['objectid', 'linkedobjectid', 'connectionid', 'fts_document'];
+            const columns = Object.keys(data[0])  
+                .filter(key => !excludedFields.includes(key))
+                .map(key => ({
+                    data: key,
+                    title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
+                }));
 
             if ($.fn.DataTable.isDataTable('#partControlTable')) {
-                $('#partControlTable').DataTable().destroy();
-                $('#partControlTable thead').empty(); 
+                $('#partControlTable').DataTable().clear().destroy();
             }
 
             const thead = $('#partControlTable thead');
+            thead.empty();
             const headerRow = $('<tr></tr>');
             columns.forEach(col => {
                 headerRow.append(`<th>${col.title}</th>`);
@@ -499,9 +498,9 @@ function loadPartControlTable() {
             thead.append(headerRow);
 
             $('#partControlTable').DataTable({
-                data: filteredData,
+                data: data,
                 columns: columns,
-                order: [[ columns.findIndex(c => c.data === 'createddate') || 0, 'desc' ]],
+                order: [[columns.findIndex(c => c.data === 'createddate') || 0, 'desc']],
                 paging: false,
                 searching: false,
                 scrollX: true,
@@ -509,35 +508,36 @@ function loadPartControlTable() {
                 destroy: true
             });
         },
-        error: function() {
+        error: function(xhr, status, error) {
+            console.error('AJAX error:', status, error);
             $('#errorMessage').text('Failed to load part controls.');
         }
     });
 }
-
     $(document).ready(function() {
         loadPartControlTable();
-		const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
-		 if (partInfo) {
-	            $('.part-number').text(partInfo.name || '');
-	            $('.part-type').text(partInfo.type || '');
-	            const icon = (partInfo.type && partInfo.type.toLowerCase() === 'fastener') 
-	                ? 'https://img.icons8.com/?size=50&id=20544&format=png&color=000000' 
-	                : 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000';
-	            $('#typeIcon').attr('src', icon);
-	            $('.state-box .state-label').remove();
-	            if (partInfo.state) {
-	                $('<span>')
-	                    .addClass('state-label')
-	                    .text('State: ' + partInfo.state)
-	                    .prependTo('.state-box');
-	            }
-	        } else {
-	            $('.part-number').text('');
-	            $('.part-type').text('');
-	            $('#typeIcon').attr('src', 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000');
-	            $('.state-box .state-label').remove();
-	        }
+        const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
+        if (partInfo) {
+            $('.part-number').text(partInfo.name || '');
+            $('.part-type').text(partInfo.type || '');
+            const icon = (partInfo.type && partInfo.type.toLowerCase() === 'fastener') 
+                ? 'https://img.icons8.com/?size=50&id=20544&format=png&color=000000' 
+                : 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000';
+
+            $('#typeIcon').attr('src', icon);
+            $('.state-box .state-label').remove();
+            if (partInfo.state) {
+                $('<span>')
+                    .addClass('state-label')
+                    .text('State: ' + partInfo.state)
+                    .prependTo('.state-box');
+            }
+        } else {
+            $('.part-number').text('');
+            $('.part-type').text('');
+            $('#typeIcon').attr('src', 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000');
+            $('.state-box .state-label').remove();
+        }
 
         document.getElementById('openCreatePanelBtn').addEventListener('click', function () {
             const urlParams = new URLSearchParams(window.location.search);
@@ -552,7 +552,7 @@ function loadPartControlTable() {
             }
         });
     });
-    
+
     $('#addExistingpart').on('click', function () {
         const urlParams = new URLSearchParams(window.location.search);
         const objectid = urlParams.get('name');
@@ -565,22 +565,18 @@ function loadPartControlTable() {
         }
     });
 
-    window.addEventListener('message', function (event) {
-    	  const action = event.data?.action;
-    	  const createPanel = document.getElementById('createPanel');
+    window.addEventListener('message', function(event) {
+        if (!event.data) return;
 
-    	  if (!createPanel) return;
-
-    	  if (action === 'closeOnly') {
-    	    createPanel.classList.remove('active');
-    	  }
-
-    	  if (action === 'closeAndRefresh') {
-    	    createPanel.classList.remove('active');
-    	    loadPartControlTable();
-    	    <!--refreshPartControlList(); -->
-    	  }
-    	});
+        if (event.data.action === 'closeOnly') {
+            document.getElementById('createPanel').classList.remove('active');
+        } else if (event.data.action === 'closeAndRefresh') {
+            document.getElementById('createPanel').classList.remove('active');
+            loadPartControlTable(); 
+        } else if (event.data && event.data.selectedParts) {
+            receiveSelectedParts(event.data.selectedParts);
+        }
+    });
 
     function closeCreatePanel() {
         const panel = document.getElementById('createPanel');

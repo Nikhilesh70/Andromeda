@@ -119,83 +119,59 @@ public class SearchData {
     public Response addPartControlWithSource(@PathParam("sourceobjectid") String sourceObjectId, 
                                              List<Map<String, Object>> partControls) {
         try {
-            // Validate the input data
             if (partControls == null || partControls.isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(Map.of("error", "No part control data provided"))
-                        .build();
+                return Response.ok("error", "No part control data provided").build();
             }
-
             if (sourceObjectId == null || sourceObjectId.isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(Map.of("error", "'sourceobjectid' is required"))
-                        .build();
+                return Response.ok("error", "'sourceobjectid' is required").build();
             }
-
-            // Generate connectionId and timestamp
             String connectionId = generateConnectionId();
             String createdDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             LocalDateTime localDateTime = LocalDateTime.parse(createdDate, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-
-            // Insert SQL query
             String insertSQL = "INSERT INTO amxcoreconnectiondata (connectionid, type, name, fromid, toid, fromname, toname, createddate) "
                              + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-
             try (Connection conn = DriverManager.getConnection(url, user, db_password)) {
-                conn.setAutoCommit(false);  // Start transaction
-
+                conn.setAutoCommit(false);  
                 try (PreparedStatement ps = conn.prepareStatement(insertSQL)) {
-                    // Loop over all the part control data
                     for (Map<String, Object> rawPartControl : partControls) {
                         Map<String, String> partControlMap = new HashMap<>();
                         for (Map.Entry<String, Object> entry : rawPartControl.entrySet()) {
                             partControlMap.put(entry.getKey().toLowerCase(), entry.getValue() == null ? "" : entry.getValue().toString());
                         }
-
-                        // Retrieve part details
                         String partName = partControlMap.get("name");
                         String partType = partControlMap.get("type");
                         String partId = partControlMap.get("objectid");
-
-                        // Skip if essential part information is missing
                         if (partName == null || partType == null || partId == null) {
-                            System.err.println("Skipping insert due to missing data in part control: " + partControlMap);
+                            //System.err.println("Skipping insert due to missing data in part control: " + partControlMap);
                             continue;
                         }
-
-                        // Determine the fromName based on partType
                         String fromName = "";
                         if ("partspecification".equalsIgnoreCase(partType)) {
-                            fromName = "PartSpecification";  // Set fromName to PartSpecification
+                            fromName = "PartSpecification";
                         } else if ("partcontrol".equalsIgnoreCase(partType)) {
-                            fromName = "PartControl";  // Set fromName to PartControl
+                            fromName = "PartControl";  
                         } else {
-                            // If part type is unexpected, log the error and skip the insertion
-                            System.err.println("Unexpected part type: " + partType);
                             continue;
                         }
-
-                        // Set parameters for the INSERT SQL statement
                         ps.setString(1, connectionId);
                         ps.setString(2, partType);
                         ps.setString(3, partName);
                         ps.setString(4, partId);
                         ps.setString(5, sourceObjectId);
-                        ps.setString(6, fromName); // Set the correct fromName
-                        ps.setString(7, "part");  // The destination name is hardcoded as "part"
-                        ps.setTimestamp(8, Timestamp.valueOf(localDateTime)); // Use the current timestamp
+                        ps.setString(6, fromName); 
+                        ps.setString(7, "part");  
+                        ps.setTimestamp(8, Timestamp.valueOf(localDateTime)); 
                         ps.executeUpdate();
                     }
                 }
 
-                // Update amxcorepartdata table with the new connectionId
+                // Update amxcorepartdata table 
                 String updateSQL = "UPDATE amxcorepartdata SET connectionid = ? WHERE objectid = ?";
                 try (PreparedStatement psUpdate = conn.prepareStatement(updateSQL)) {
                     psUpdate.setString(1, connectionId);
                     psUpdate.setString(2, sourceObjectId);
                     int rowsUpdated = psUpdate.executeUpdate();
 
-                    // If no rows were updated, rollback the transaction
                     if (rowsUpdated == 0) {
                         conn.rollback();
                         return Response.status(Response.Status.NOT_FOUND)
@@ -221,9 +197,6 @@ public class SearchData {
                     .build();
         }
     }
-
-
-
     public String generateConnectionId() {
         SecureRandom random = new SecureRandom();
         StringBuilder sb = new StringBuilder();

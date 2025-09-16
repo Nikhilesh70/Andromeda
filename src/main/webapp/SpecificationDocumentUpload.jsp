@@ -26,7 +26,6 @@
     color: #333;
   }
 
-  /* Box styling */
   .topbar > div {
     display: flex;
     align-items: center;
@@ -332,11 +331,12 @@ forn-wrap-mode:nowrap;
         white-space: nowrap;
         text-wrap-mode:nowrap;
     }
-   #typeIcon {
-  width: 100px;
-  height: 100px;
+  #typeIcon {
+  width: 50px;
+  height: 50px;
   object-fit: contain; 
 }
+  g
 </style>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -356,7 +356,7 @@ forn-wrap-mode:nowrap;
       <div class="part-number" style="font-weight: 700; font-size: 14px;"></div>
       <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px;"></div>
     </div>
-    <div class="vertical-line"></div>
+   7-<div class="vertical-line"></div>
   </div>
     <div class="right-section">
         <div class="state-box">
@@ -377,7 +377,7 @@ forn-wrap-mode:nowrap;
         <a class="nav-link" href="ControlManagement.jsp?name=<%= request.getParameter("name") %>">Control Management</a>
    		<a class="nav-link" href="PartSpecification.jsp?name=<%= request.getParameter("name") %>">PartSpecification</a>
    		<a class="nav-link active" href="SpecificationDocumentUpload.jsp?name=<%=request.getParameter("name") %>">SpecificationDocument</a>
-   		
+	
     </div>
    <div class="main-panel">
     <div class="toolbar mt-2">
@@ -391,9 +391,45 @@ forn-wrap-mode:nowrap;
     <input type="file" id="fileInput" style="display: none;" />
     <div id="loadingSpinner"></div>
     <div id="errorMessage" class="error"></div>
+  <div class="table-responsive mt-3">
+  <table id="documentTable" class="properties">
+    <thead>
+      <tr>
+        <th>File Name</th>
+      </tr>
+    </thead>
+    <tbody id="documentTableBody"></tbody>
+  </table>
+</div>
 </div>
 </div>
 <script>
+$(document).ready(function () {
+    const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
+
+    if (partInfo) {
+        $('.part-number').text(partInfo.name || '');
+        $('.part-type').text(partInfo.type || '');
+
+        const icon = (partInfo.type && partInfo.type.toLowerCase() === 'fastener')
+            ? 'https://img.icons8.com/?size=50&id=20544&format=png&color=000000'
+            : 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000';
+
+        $('#typeIcon').attr('src', icon);
+        $('.state-box .state-label').remove();
+        if (partInfo.state) {
+            $('<span>')
+                .addClass('state-label')
+                .text('State: ' + partInfo.state)
+                .prependTo('.state-box');
+        }
+    } else {
+        $('.part-number').text('');
+        $('.part-type').text('');
+        $('#typeIcon').attr('src', 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000');
+        $('.state-box .state-label').remove();
+    }
+});
 document.getElementById('uploadBtn').addEventListener('click', function () {
   document.getElementById('fileInput').click();
 });

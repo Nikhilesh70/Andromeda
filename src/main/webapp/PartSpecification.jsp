@@ -18,7 +18,6 @@
     color: #333;
   }
 
-  /* Top Bar Container */
   .topbar {
     display: flex;
     background: #f5f7fa;
@@ -28,7 +27,6 @@
     color: #333;
   }
 
-  /* Box styling */
   .topbar > div {
     display: flex;
     align-items: center;
@@ -39,12 +37,10 @@
     white-space: nowrap;
   }
 
-  /* Last box has right border */
   .topbar > div:last-child {
     border-right: 1px solid #cfd3db;
   }
 
-  /* Folder Icon Box */
   .folder-box {
     background: #e3e7eb;
     border: 1px solid #d1d6dc;
@@ -62,7 +58,6 @@
     height: 16px;
   }
 
-  /* Part Number box */
   .part-number {
     font-weight: 700;
     font-size: 14px;
@@ -71,7 +66,6 @@
     margin-right: 12px;
   }
 
-  /* Description box */
   .description {
     font-weight: 600;
     font-size: 13px;
@@ -81,7 +75,6 @@
     margin-right: 12px;
   }
 
-  /* State box */
   .state-box {
     font-weight: 600;
     font-size: 13px;
@@ -97,7 +90,6 @@
     margin-right: 4px;
   }
 
-  /* Buttons styling */
   .btn-submit {
     background-color: #5c8bff;
     border: 1px solid #3f70ff;
@@ -128,7 +120,6 @@
     background-color: #c6cad2;
   }
 
-  /* Info box */
   .info-box {
     font-size: 11px;
     color: #666;
@@ -140,15 +131,14 @@
     color: #444;
   }
 
-  /* Adjust spacing between boxes */
   .topbar > div:not(:last-child) {
-    margin-right: -1px; /* To collapse adjacent borders */
+    margin-right: -1px; 
   }
 	
 	.vertical-line img {
-  height: 20px;  /* Adjust height to make it appear like a line */
-  width: 1px;    /* Make it thin like a vertical line */
-  margin: 0 10px; /* Space around the line */
+  height: 20px;  
+  width: 1px;    
+  margin: 0 10px; 
 }
 
   .container {
@@ -187,7 +177,6 @@
    font-weight: bold;
 }
 
-/* Main Panel */
 .main-panel {
   flex-grow: 1;
   padding: 20px;
@@ -234,7 +223,7 @@
   }
 
 table.properties {
-  width: 100%; /* full width */
+  width: 100%;
   border-collapse: collapse;
   border: 1px solid #ddd;
   font-size: 16px;
@@ -245,14 +234,14 @@ table.properties {
 table.properties th,
 table.properties td {
   padding: 12px 16px;
-  border: 1px solid #ddd; /* add borders on all cells */
+  border: 1px solid #ddd; 
   vertical-align: middle;
 }
 
 table.properties th {
   background: #fafafa;
   font-weight: bold;
-  width: 200px; /* label column width */
+  width: 200px; 
   text-align: left;
 }
 
@@ -270,7 +259,6 @@ table.properties th {
   margin-top: 0;
 }
 
-  /* Loading Spinner */
   #loadingSpinner {
     display: none;
     position: fixed;
@@ -345,6 +333,17 @@ forn-wrap-mode:nowrap;
         white-space: nowrap;
         text-wrap-mode:nowrap;
     }
+   .section-label {
+    font-weight: bold;
+    font-size: 14px;
+    margin: 10px 0 5px 0;
+    color: #333;
+  }
+  
+#partSpecificationTable, #addExistingDataTable {
+    display: none;
+}
+
 </style>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -388,7 +387,6 @@ forn-wrap-mode:nowrap;
         <a class="nav-link" href="ControlManagement.jsp?name=<%= request.getParameter("name") %>">Control Management</a>
    		<a class="nav-link active" href="PartSpecification.jsp?name=<%= request.getParameter("name") %>">PartSpecification</a>
    		<a class="nav-link" href="SpecificationDocumentUpload.jsp?name=<%=request.getParameter("name") %>">SpecificationDocument</a>
-   		
     </div>
    <div class="main-panel">
     <div class="toolbar mt-2">
@@ -402,10 +400,19 @@ forn-wrap-mode:nowrap;
 
     <div id="loadingSpinner"></div>
     <div id="errorMessage" class="error"></div>
+    <div class="section-label">PartSpecificationTable</div>
     <table class="table table-bordered mt-2" id="partSpecificationTable">
     <thead>
         <tr>
-
+        </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+<div class="section-label">AddExistingParts</div>
+ <table class="table table-bordered mt-2" id="addExistingDataTable">
+    <thead>
+        <tr>
         </tr>
     </thead>
     <tbody>
@@ -439,9 +446,10 @@ function receiveSelectedParts(selectedParts) {
     $('#errorMessage').text('New parts added.');
 }
 
-
-function loadPartControlTable() {
+function loadPartSpecificationTable() {
     $('#errorMessage').text('Loading part controls...');
+    $('.section-label:contains("PartSpecificationTable")').hide();
+    $('#partSpecificationTable').hide();
 
     const urlParams = new URLSearchParams(window.location.search);
     const objectid = urlParams.get('name');
@@ -458,20 +466,25 @@ function loadPartControlTable() {
         cache: false,
         success: function(data) {
             $('#errorMessage').text('');
-            if (!data || data.length === 0 || data.message) {
-                $('#errorMessage').text(data.message || 'No part Specification found.');
+            if (!data || !Array.isArray(data) || data.length === 0 || data.message) {
+                $('#errorMessage').text(data ? data.message || 'No part Specification found.' : 'Error loading data.');
                 if ($.fn.DataTable.isDataTable('#partSpecificationTable')) {
-                    $('#partSpecificationTable').DataTable().clear().draw();
+                    $('#partSpecificationTable').DataTable().clear().destroy();
                 }
+                $('.section-label:contains("PartSpecificationTable")').hide();
+                $('#partSpecificationTable').hide();
                 return;
             }
 
-            const excludedFields = ['objectid', 'linkedobjectid', 'connectionid','fts_document'];
+            $('.section-label:contains("PartSpecificationTable")').show();
+            $('#partSpecificationTable').show();
+
+            const excludedFields = ['objectid', 'linkedobjectid', 'connectionid', 'fts_document'];
             const columns = Object.keys(data[0])
-                .filter(key => !excludedFields.includes(key)) 
+                .filter(key => !excludedFields.includes(key))
                 .map(key => ({
                     data: key,
-                    title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ') 
+                    title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
                 }));
 
             if ($.fn.DataTable.isDataTable('#partSpecificationTable')) {
@@ -500,11 +513,87 @@ function loadPartControlTable() {
         error: function(xhr, status, error) {
             console.error('AJAX error:', status, error);
             $('#errorMessage').text('Failed to load part controls.');
+            $('.section-label:contains("PartSpecificationTable")').hide();
+            $('#partSpecificationTable').hide();
+        }
+    });
+}
+
+function loadAddExistingPartTable() {
+    $('#errorMessage').text('Loading Add Existing parts...');
+    $('.section-label:contains("AddExistingParts")').hide();
+    $('#addExistingDataTable').hide();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const objectid = urlParams.get('name');
+
+    if (!objectid) {
+        $('#errorMessage').text('Missing object ID.');
+        return;
+    }
+
+    $.ajax({
+        url: 'http://localhost:8080/andromeda/api/datafetchservice/getaddexisting',
+        data: { objectid: objectid },
+        dataType: 'json',
+        cache: false,
+        success: function(data) {
+            $('#errorMessage').text('');
+            if (!data || !Array.isArray(data) || data.length === 0 || data.message) {
+                $('#errorMessage').text(data ? data.message || 'No part Connection data found.' : 'Error loading data.');
+                if ($.fn.DataTable.isDataTable('#addExistingDataTable')) {
+                    $('#addExistingDataTable').DataTable().clear().destroy();
+                }
+                $('.section-label:contains("AddExistingParts")').hide();
+                $('#addExistingDataTable').hide();
+                return;
+            }
+
+            $('.section-label:contains("AddExistingParts")').show();
+            $('#addExistingDataTable').show();
+
+            const excludedFields = ['connectionid'];
+            const columns = Object.keys(data[0])
+                .filter(key => !excludedFields.includes(key))
+                .map(key => ({
+                    data: key,
+                    title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
+                }));
+
+            if ($.fn.DataTable.isDataTable('#addExistingDataTable')) {
+                $('#addExistingDataTable').DataTable().clear().destroy();
+            }
+
+            const thead = $('#addExistingDataTable thead');
+            thead.empty();
+            const headerRow = $('<tr></tr>');
+            columns.forEach(col => {
+                headerRow.append(`<th>${col.title}</th>`);
+            });
+            thead.append(headerRow);
+
+            $('#addExistingDataTable').DataTable({
+                data: data,
+                columns: columns,
+                order: [[columns.findIndex(c => c.data === 'createddate') || 0, 'desc']],
+                paging: false,
+                searching: false,
+                scrollX: true,
+                info: false,
+                destroy: true
+            });
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX error:', status, error);
+            $('#errorMessage').text('Failed to load part connections.');
+            $('.section-label:contains("AddExistingParts")').hide();
+            $('#addExistingDataTable').hide();
         }
     });
 }
     $(document).ready(function() {
-        loadPartControlTable();
+        loadPartSpecificationTable();
+        loadAddExistingPartTable();
         const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
         if (partInfo) {
             $('.part-number').text(partInfo.name || '');
@@ -560,7 +649,7 @@ function loadPartControlTable() {
             document.getElementById('createPanel').classList.remove('active');
         } else if (event.data.action === 'closeAndRefresh') {
             document.getElementById('createPanel').classList.remove('active');
-            loadPartControlTable();
+            loadPartSpecificationTable();
         } else if (event.data && event.data.selectedParts) {
             receiveSelectedParts(event.data.selectedParts);
         }
