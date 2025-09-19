@@ -370,24 +370,31 @@ public class DataFetchService {
     }
 
     //history
+
     @GET
-    @Path("/history")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getHistory(@QueryParam("objectId") String id) {
-        String sql = "SELECT history FROM parthistory WHERE objectid = ?";
-        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return Response.ok("{\"history\":\"" + rs.getString("history") + "\"}").build();
-                }
-                return Response.status(Status.NOT_FOUND).entity("{\"error\":\"No history\"}").build();
-            }
-        } catch (SQLException e) {
-            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("{\"error\":\"" + e.getMessage() + "\"}").build();
-        }
-    }
- 
+       @Path("/history")
+       @Produces(MediaType.APPLICATION_JSON)
+       public Response getHistory(@QueryParam("objectId") String objectId) {
+           String sql = "SELECT history FROM parthistory WHERE objectid = ?";
+           try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+               ps.setString(1, objectId);
+               try (ResultSet rs = ps.executeQuery()) {
+                   List<String> histories = new ArrayList<>();
+                   while (rs.next()) {
+                       histories.add(rs.getString("history"));
+                   }
+                   if (histories.isEmpty()) {
+                       return Response.ok("{\"error\":\"No history found for objectId:"+ "\"}").build();
+                   }
+                   JSONObject json = new JSONObject();
+                   json.put("objectId", objectId);
+                   json.put("history", histories);
+                   return Response.ok(json.toString()).build();
+               }
+           } catch (SQLException e) {
+               return Response.ok("{\"error\":\"" + e.getMessage() + "\"}").build();
+           }
+       }
 
     // Persons list
     @GET
@@ -558,9 +565,9 @@ public class DataFetchService {
         }
     }
     
-    //create with connection
+    //createwith connection
     @SuppressWarnings("unchecked")
-	@POST
+    @POST
     @Path("/createWithConnection")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -602,6 +609,7 @@ public class DataFetchService {
                     ))
                     .build();
             }
+
             String generatedName = getNextPartControlName();
             String generatedPartId = generateHexId("PACO");
             String existingConnectionId = getConnectionIdForObject(sourceObjectId);
@@ -609,57 +617,59 @@ public class DataFetchService {
                     ? existingConnectionId
                     : generateHexId("CONN");
 
-            partControlMap.put("name", generatedName);
-            partControlMap.put("objectid", generatedPartId);
-            partControlMap.put("connectionid", connectionIdToUse);
-            partControlMap.put("linkedobjectid", sourceObjectId);
-            String insertPartControlSQL = "INSERT INTO amxpartcontroldata (objectid, name, supertype, type, description, createddate, owner, email, assignee, connectionid, linkedobjectid) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            try (Connection conn = DriverManager.getConnection(url, user, db_password);
-                 PreparedStatement ps = conn.prepareStatement(insertPartControlSQL)) {
-                ps.setString(1, generatedPartId);
-                ps.setString(2, generatedName);
-                ps.setString(3, rawPartControl.getOrDefault("supertype", "").toString());
-                ps.setString(4, rawPartControl.getOrDefault("type", "").toString());
-                ps.setString(5, rawPartControl.getOrDefault("description", "").toString());
-                ps.setTimestamp(6, Timestamp.valueOf(LocalDateTime.now()));
-                ps.setString(7, rawPartControl.getOrDefault("owner", "").toString());
-                ps.setString(8, rawPartControl.getOrDefault("email", "").toString());
-                ps.setString(9, rawPartControl.getOrDefault("assignee", "").toString());
-                ps.setString(10, connectionIdToUse);
-                ps.setString(11, sourceObjectId);
-                ps.executeUpdate();
-            }
+            // Fetch initial state from amxschemarules table
+            String initialState;
+            try (Connection conn = DriverManager.getConnection(url, user, db_password)) {
+                initialState = getInitialState(conn);
 
-            String insertConnectionDataSQL = "INSERT INTO amxcoreconnectiondata (connectionid, type, name, fromid, toid, fromname, toname, createddate) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-            try (Connection conn = DriverManager.getConnection(url, user, db_password);
-                 PreparedStatement ps = conn.prepareStatement(insertConnectionDataSQL)) {
-                ps.setString(1, connectionIdToUse);
-                ps.setString(2, rawPartControl.getOrDefault("type", "").toString());
-                ps.setString(3, generatedName);
-                ps.setString(4, generatedPartId);
-                ps.setString(5, sourceObjectId);
-                ps.setString(6, "partcontrol");
-                ps.setString(7, "part");
-                ps.setTimestamp(8, Timestamp.valueOf(LocalDateTime.now()));
-                ps.executeUpdate();
-            }
+                String insertPartControlSQL = "INSERT INTO amxpartcontroldata " +
+                        "(objectid, name, supertype, type, description, createddate, owner, email, assignee, connectionid, linkedobjectid, currentstate) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-            String updatePartDataSQL = "UPDATE amxcorepartdata SET connectionid = ? WHERE objectid = ?";
-            try (Connection conn = DriverManager.getConnection(url, user, db_password);
-                 PreparedStatement ps = conn.prepareStatement(updatePartDataSQL)) {
-                ps.setString(1, connectionIdToUse);  
-                ps.setString(2, sourceObjectId);      
-                ps.executeUpdate();
-            }
-            String historyMsg = "Created by system at " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            String insertHistorySQL = "INSERT INTO partcontrolhistory (objectid, history) VALUES (?, ?)";
-            try (Connection conn = DriverManager.getConnection(url, user, db_password);
-                 PreparedStatement ps = conn.prepareStatement(insertHistorySQL)) {
-                ps.setString(1, generatedPartId);
-                ps.setString(2, historyMsg);
-                ps.executeUpdate();
+                try (PreparedStatement ps = conn.prepareStatement(insertPartControlSQL)) {
+                    ps.setString(1, generatedPartId);
+                    ps.setString(2, generatedName);
+                    ps.setString(3, rawPartControl.getOrDefault("supertype", "").toString());
+                    ps.setString(4, rawPartControl.getOrDefault("type", "").toString());
+                    ps.setString(5, rawPartControl.getOrDefault("description", "").toString());
+                    ps.setTimestamp(6, Timestamp.valueOf(LocalDateTime.now()));
+                    ps.setString(7, rawPartControl.getOrDefault("owner", "").toString());
+                    ps.setString(8, rawPartControl.getOrDefault("email", "").toString());
+                    ps.setString(9, rawPartControl.getOrDefault("assignee", "").toString());
+                    ps.setString(10, connectionIdToUse);
+                    ps.setString(11, sourceObjectId);
+                    ps.setString(12, initialState);
+                    ps.executeUpdate();
+                }
+
+                String insertConnectionDataSQL = "INSERT INTO amxcoreconnectiondata (connectionid, type, name, fromid, toid, fromname, toname, createddate) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                try (PreparedStatement ps = conn.prepareStatement(insertConnectionDataSQL)) {
+                    ps.setString(1, connectionIdToUse);
+                    ps.setString(2, rawPartControl.getOrDefault("type", "").toString());
+                    ps.setString(3, generatedName);
+                    ps.setString(4, generatedPartId);
+                    ps.setString(5, sourceObjectId);
+                    ps.setString(6, "partcontrol");
+                    ps.setString(7, "part");
+                    ps.setTimestamp(8, Timestamp.valueOf(LocalDateTime.now()));
+                    ps.executeUpdate();
+                }
+
+                String updatePartDataSQL = "UPDATE amxcorepartdata SET connectionid = ? WHERE objectid = ?";
+                try (PreparedStatement ps = conn.prepareStatement(updatePartDataSQL)) {
+                    ps.setString(1, connectionIdToUse);
+                    ps.setString(2, sourceObjectId);
+                    ps.executeUpdate();
+                }
+
+                String historyMsg = "Created by system at " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                String insertHistorySQL = "INSERT INTO partcontrolhistory (objectid, history) VALUES (?, ?)";
+                try (PreparedStatement ps = conn.prepareStatement(insertHistorySQL)) {
+                    ps.setString(1, generatedPartId);
+                    ps.setString(2, historyMsg);
+                    ps.executeUpdate();
+                }
             }
 
             return Response.ok(Map.of(
@@ -675,7 +685,23 @@ public class DataFetchService {
                 .build();
         }
     }
-
+    public String getInitialState(Connection conn) throws SQLException {
+        String fetchStateRule = "SELECT rulevalue FROM amxschemarules WHERE rulename = 'PartControlStates'";
+        String initialState = "InWork";
+        try (PreparedStatement stateStmt = conn.prepareStatement(fetchStateRule);
+             ResultSet stateRs = stateStmt.executeQuery()) {
+            if (stateRs.next()) {
+                String ruleValue = stateRs.getString("rulevalue");
+                if (ruleValue != null && !ruleValue.trim().isEmpty()) {
+                    String[] states = ruleValue.split("\\|");
+                    if (states.length > 0) {
+                        initialState = states[0].trim();
+                    }
+                }
+            }
+        }
+        return initialState;
+    }
         public boolean isPartControlLinkedToSource(String sourceObjectId) {
             String sql = "SELECT COUNT(*) FROM amxpartcontroldata WHERE linkedobjectid = ?";
             try (Connection conn = DriverManager.getConnection(url, user, db_password);
@@ -967,30 +993,27 @@ public class DataFetchService {
         @Produces(MediaType.APPLICATION_JSON)
         public Response getPartControlHistory(@QueryParam("objectId") String objectId) {
             if (objectId == null || objectId.isEmpty()) {
-                return Response.status(Status.BAD_REQUEST)
-                               .entity("{\"error\":\"ObjectId parameter is required\"}")
-                               .build();
+                return Response.ok("{\"error\":\"ObjectId parameter is required\"}").build();
             }
-
             String sql = "SELECT history FROM partcontrolhistory WHERE objectid = ?";
             try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, objectId);
-                
                 try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                       
-                        String history = rs.getString("history");
-                        String jsonResponse = "{\"history\": \"" + history + "\"}";  
-                        return Response.ok(jsonResponse).build();
-                    } else {
-                  
-                        return Response.ok("{\"message\":\"No history found for objectId " + objectId + "\"}").build();
+                    List<String> histories = new ArrayList<>();
+                    while (rs.next()) {
+                        histories.add(rs.getString("history"));
                     }
+                    if (histories.isEmpty()) {
+                        return Response.ok("{\"error\":\"No history found for objectId:"+ "\"}").build();
+                    }
+
+                    JSONObject json = new JSONObject();
+                    json.put("objectId", objectId);
+                    json.put("history", histories);
+                    return Response.ok(json.toString()).build();
                 }
             } catch (SQLException e) {
-                return Response.status(Status.INTERNAL_SERVER_ERROR)
-                               .entity("{\"error\":\"" + e.getMessage() + "\"}")
-                               .build();
+                return Response.ok("{\"error\":\"" + e.getMessage() + "\"}").build();
             }
         }
         
@@ -1253,42 +1276,40 @@ public class DataFetchService {
             } else {
                 return Response.ok("{\"error\": \"Invalid objectId suffix\"}").build();
             }
-
             try (Connection conn = DriverManager.getConnection(url, user, db_password)) {
                 JSONObject input = new JSONObject(jsonBody);
                 String newState = input.optString("state", "").trim();
-
                 if (newState.isEmpty()) {
                     return Response.ok("{\"error\": \"State must be provided\"}").build();
                 }
-
                 String currentState = getCurrentState(conn, dataTable, objectId);
                 if (currentState == null) {
                     return Response.ok("{\"error\": \"Part not found for objectId: " + objectId + "\"}").build();
                 }
-
                 List<String> validStates = getStateSequence(conn, ruleName);
                 if (!validStates.contains(newState)) {
                     return Response.ok("{\"error\": \"Invalid state: " + newState + "\"}").build();
                 }
-
                 int currentIndex = validStates.indexOf(currentState);
                 int newIndex = validStates.indexOf(newState);
-
-                if (newIndex == currentIndex) {
-                    return Response.ok("{\"error\": \"New state is the same as current state.\"}").build();
+                String finalState = validStates.get(validStates.size() - 1);
+                if (currentState.equals(finalState)) {
+                	return Response.ok("{\"State can't be changed as it reaches its final stage: " + currentState + "\"}").build();
                 }
-
-                String direction = (newIndex > currentIndex) ? "Promoted" : "Demoted";
+                String direction;
+                if (newIndex == currentIndex + 1) {
+                    direction = "Promoted";
+                } else if (newIndex == currentIndex - 1) {
+                    direction = "Demoted";
+                } else {
+                    return Response.ok("{\"error\": \"Invalid state transition. Only one-step transitions are allowed.\"}").build();
+                }
                 String timestamp = java.time.LocalDateTime.now().toString();
                 String historyMessage = direction + " to state: " + newState + " at " + timestamp;
-
                 updatePartState(conn, dataTable, objectId, newState);
                 insertHistory(conn, historyTable, objectId, historyMessage);
-
                 return Response.ok("{\"message\": \"State updated successfully\", \"oldState\": \"" + currentState + "\", \"newState\": \"" + newState + "\"}")
                         .build();
-
             } catch (Exception e) {
                 return Response.ok("{\"error\": \"Internal error: " + e.getMessage() + "\"}").build();
             }
@@ -1302,7 +1323,6 @@ public class DataFetchService {
             if (objectId == null || objectId.trim().isEmpty()) {
                 return Response.ok("{\"error\": \"objectId must be provided\"}").build();
             }
-
             String dataTable;
             if (objectId.endsWith(".APN")) {
                 dataTable = "amxcorepartdata";
@@ -1764,5 +1784,39 @@ public class DataFetchService {
                 }
             }
             
+    // get created partcontrol from partcontrol management
+            @GET
+            @Path("/getpartcontrolfrompc")
+            @Produces(MediaType.APPLICATION_JSON)
+            public Response getPartControlByPC(@QueryParam("objectid") String objectid) {
+                if (objectid == null || objectid.trim().isEmpty()) {
+                    return Response.ok("{\"error\":\"objectid query parameter is required\"}").build();
+                }
+                String sql = "SELECT * FROM amxpartcontroldata WHERE objectid = ? ORDER BY createddate DESC";
+                List<Map<String, String>> results = new ArrayList<>();
+                try (Connection conn = getConn();
+                     PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setString(1, objectid.trim());
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        ResultSetMetaData metaData = rs.getMetaData();
+                        int colCount = metaData.getColumnCount();
+                        while (rs.next()) {
+                            Map<String, String> row = new LinkedHashMap<>();
+                            for (int i = 1; i <= colCount; i++) {
+                                row.put(metaData.getColumnName(i), rs.getString(i));
+                            }
+                            results.add(row);
+                        }
+                    }
+                    if (results.isEmpty()) {
+                        return Response.ok("{\"message\":\"No  Created PartControl data found.\"}").build();
+                    }
+                    return Response.ok(results).build();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return Response.ok("{\"error\":\"" + e.getMessage() + "\"}").build();
+                }
+            }
+     
    }
 
