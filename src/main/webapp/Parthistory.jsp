@@ -146,13 +146,12 @@
   }
 
 .sidebar {
-  width: 16%;
+  width: 19%;
   background-color: #f8f9fa;
   border-right: 1px solid #ddd;
   padding: 20px;
   font-size: 14px;
   box-sizing: border-box;
-   resize: horizontal;
   overflow-y: auto;
   overflow-x: hidden; 
 }
@@ -328,6 +327,32 @@ table.properties th {
   margin-right: 8px;
   vertical-align: middle;
 }
+ .state-box .state-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  margin-left: 8px;
+  user-select: none;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+}
+.state-badge.InWork {
+  background-color: #5bc0de;
+}
+.state-badge.Frozen {
+  background-color: #6c757d;
+}
+.state-badge.Approved {
+  background-color: #28a745;
+}
+.state-badge.Released {
+  background-color: #ffc107;
+  color: #000;
+} 
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
@@ -347,8 +372,7 @@ table.properties th {
   <div class="right-section">
     <div class="state-box">
       <span class="state-label">State:</span>
-      <button id="submitBtn" class="btn-submit">InWork</button>
-      <button id="evaluateBtn" class="btn-evaluate">Frozen</button>
+   
     </div>
     <div class="vertical-line"></div>
     <div class="info-box">
@@ -364,6 +388,7 @@ table.properties th {
         <a class="nav-link" href="Lifecycle.jsp?name=<%= request.getParameter("name") %>">LifeCycle</a>
         <a class="nav-link" href="ControlManagement.jsp?name=<%= request.getParameter("name") %>">Control Management</a>
    		<a class="nav-link" href="PartSpecification.jsp?name=<%= request.getParameter("name") %>">PartSpecification</a>
+   		<a class="nav-link" href="SpecificationDocumentUpload.jsp?name=<%=request.getParameter("name") %>">SpecificationDocument</a>
     </div>
 
   <div class="main-panel">
@@ -412,31 +437,28 @@ table.properties th {
         return $('<div>').text(text).html();
     }
 
-    function displayHistory(historyText) {
-        console.log("Raw historyText:", historyText);
+    function displayHistory(historyInput) {
+        console.log("Raw historyInput:", historyInput);
 
-        if (typeof historyText !== 'string' || historyText.trim() === '') {
-            showError("No valid history entries found.");
-            return;
+        let entries = [];
+
+        if (Array.isArray(historyInput)) {
+            entries = historyInput.map(e => typeof e === 'string' ? e.trim() : '').filter(e => e !== '');
+        } else if (typeof historyInput === 'string') {
+            entries = historyInput.split('|').map(e => e.trim()).filter(e => e !== '');
         }
-
-        const entries = historyText.split('|').map(e => e.trim()).filter(e => e !== '');
-
         if (entries.length === 0) {
             showError("No valid history entries found.");
             return;
         }
-
         if ($.fn.DataTable.isDataTable('#historyTable')) {
             dataTable.clear().destroy();
         }
-
         $('#historyTable tbody').empty();
 
         entries.forEach(entry => {
             $('#historyTable tbody').append('<tr><td>' + escapeHtml(entry) + '</td></tr>');
         });
-
         dataTable = $('#historyTable').DataTable({
             searching: false,
             paging: false,
@@ -444,18 +466,13 @@ table.properties th {
             info: false,
             lengthChange: false
         });
-
         $('#errorMessage').hide();
         $('#historyTable').show();
         showLoading(false);
-
-        console.log("Table displayed with entries.");
     }
-
     $(document).ready(function () {
         const objectId = getQueryParam('name');
         const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
-
         if (partInfo) {
             $('.part-number').text(partInfo.name || '');
             $('.part-type').text(partInfo.type || '');
@@ -464,14 +481,13 @@ table.properties th {
                 : 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000';
 
             $('#typeIcon').attr('src', icon);
-
             $('.state-box .state-label').remove();
-            if (partInfo.state) {
-                $('<span>')
-                    .addClass('state-label')
-                    .text('State: ' + partInfo.state)
-                    .prependTo('.state-box');
-            }
+            if (partInfo.currentstate) {
+        	    $('.state-box .state-label').remove();
+        	    const state = partInfo.currentstate;
+        	    const badge = $('<span>').addClass('state-badge ' + state.replace(/\s/g, '')).text(state);
+        	    $('<span>').addClass('state-label').text('State: ').append(badge).prependTo('.state-box');
+        	}
         } else {
             $('.part-number').text('');
             $('.part-type').text('');
@@ -496,7 +512,7 @@ table.properties th {
                 if (data && data.history) {
                     displayHistory(data.history);
                 } else {
-                    showError("No history field found in API response.");
+                    showError("No history field found.");
                 }
             },
             error: function(xhr, status, error) {

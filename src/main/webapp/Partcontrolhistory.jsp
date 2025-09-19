@@ -9,7 +9,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>History</title>
+<title>Part Control History</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -345,8 +345,37 @@ table.properties th {
   margin-right: 8px;
   vertical-align: middle;
 }
+  .state-box .state-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  margin-left: 8px;
+  user-select: none;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+}
+.state-badge.InWork {
+  background-color: #5bc0de;
+}
+
+.state-badge.InApproval {
+  background-color: #6c757d;
+}
+
+.state-badge.Completed {
+  background-color: #28a745;
+}
+
+.state-badge.Cancelled {
+  background-color: #000000;
+  color: #ffffff;
+}
+ 
 </style>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
 <div class="topbar">
@@ -363,8 +392,6 @@ table.properties th {
   <div class="right-section">
     <div class="state-box">
       <span class="state-label">State:</span>
-      <button id="submitBtn" class="btn-submit">InWork</button>
-      <button id="evaluateBtn" class="btn-evaluate">InApproval</button>
     </div>
     <div class="vertical-line"></div>
     <div class="info-box">
@@ -387,8 +414,6 @@ table.properties th {
   		<img src="history.gif" alt="History Icon" class="history-icon" />
   		<h4>History Entries</h4>
 	</div>
-
-
     <div id="loadingSpinner"></div>
     <div id="errorMessage"></div>
     <div id="noHistoryMsg" class="text text-center mt-3" style="display:none;"></div>
@@ -424,17 +449,8 @@ table.properties th {
         $('#historyTable').hide();
         showLoading(false);
     }
-
-    function displayHistory(historyText) {
-        if (!historyText || historyText.trim() === '') {
-            showError("No history found for this ID.");
-            return;
-        }
-
-        const entries = historyText.split('|').map(e => e.trim()).filter(e => e !== '');
-        console.log('Entries:', entries);  
-
-        if (entries.length === 0) {
+    function displayHistory(historyArray) {
+        if (!Array.isArray(historyArray) || historyArray.length === 0) {
             showError("No history found for this ID.");
             return;
         }
@@ -444,9 +460,10 @@ table.properties th {
         }
         $('#historyTable tbody').empty();
 
-        entries.forEach(entry => {
+        historyArray.forEach(entry => {
             $('#historyTable tbody').append('<tr><td>' + $('<div>').text(entry).html() + '</td></tr>');
         });
+
         dataTable = $('#historyTable').DataTable({
             searching: false,
             paging: false,
@@ -460,7 +477,6 @@ table.properties th {
         showLoading(false);
     }
 
-
     $(document).ready(function () {
         const objectId = getQueryParam('name');  
         if (!objectId) {
@@ -472,6 +488,20 @@ table.properties th {
         if (partInfo) {
           $('.part-number').text(partInfo.name || '');
           $('.part-type').text(partInfo.type || '');
+          $('.state-box .state-label').remove();
+          
+          if (partInfo.currentstate) {
+      	    $('.state-box .state-label').remove();
+      	    const state = partInfo.currentstate;
+      	    const badge = $('<span>')
+      	        .addClass('state-badge ' + state.replace(/\s/g, ''))
+      	        .text(state);
+      	    $('<span>')
+      	        .addClass('state-label')
+      	        .text('State: ')
+      	        .append(badge)
+      	        .prependTo('.state-box');
+      	}
         } else {
           $('.part-number').text('');
           $('.part-type').text('');
@@ -484,13 +514,12 @@ table.properties th {
             data: { objectId: objectId },  
             dataType: 'json',
             success: function (data) {
-            	 
                 if (
                     (data.error && data.error.toLowerCase().includes("no history")) ||
                     (data.message && data.message.toLowerCase().includes("no history"))
                 ) {
                     showError(data.message || data.error || "No history found for this ID.");
-                } else if (data.history) {
+                } else if (Array.isArray(data.history)) {
                     displayHistory(data.history);
                 } else {
                     showError("Unexpected response format.");

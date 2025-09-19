@@ -142,13 +142,12 @@
   }
 
 .sidebar {
-  width: 16%;
+  width: 19%;
   background-color: #f8f9fa;
   border-right: 1px solid #ddd;
   padding: 20px;
   font-size: 14px;
   box-sizing: border-box;
-  resize: horizontal;
   overflow-y: auto;
   overflow-x: hidden; 
   
@@ -340,7 +339,32 @@ table.properties th {
   height: 50px;
   object-fit: contain; 
 }
-  
+ .state-box .state-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  margin-left: 8px;
+  user-select: none;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+}
+.state-badge.InWork {
+  background-color: #5bc0de;
+}
+.state-badge.Frozen {
+  background-color: #6c757d;
+}
+.state-badge.Approved {
+  background-color: #28a745;
+}
+.state-badge.Released {
+  background-color: #ffc107;
+  color: #000;
+} 
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
@@ -363,8 +387,6 @@ table.properties th {
   <div class="right-section">
     <div class="state-box">
       <span class="state-label">State:</span>
-      <button id="submitBtn" class="btn-submit">InWork</button>
-      <button id="evaluateBtn" class="btn-evaluate">Frozen</button>
     </div>
     <div class="vertical-line"></div>
     <div class="info-box">
@@ -379,8 +401,8 @@ table.properties th {
         <a class="nav-link" href="Lifecycle.jsp?name=<%= request.getParameter("name") %>">LifeCycle</a>
     	<a class="nav-link" href="ControlManagement.jsp?name=<%= request.getParameter("name") %>">ControlManagement</a>
    		<a class="nav-link" href="PartSpecification.jsp?name=<%=request.getParameter("name") %>">PartSpecification</a>
+   		<a class="nav-link" href="SpecificationDocumentUpload.jsp?name=<%=request.getParameter("name") %>">SpecificationDocument</a>
 </div>
-
   <div class="main-panel">
        <div class="toolbar">
       <button id="editBtn" title="Edit">
@@ -409,8 +431,6 @@ table.properties th {
     <!-- JS Libraries -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-
 <script>
     const loggedInUserAccess = "<%= userAccess %>";
 </script>
@@ -512,14 +532,21 @@ function populateTopBar(data) {
         ? 'https://img.icons8.com/?size=50&id=20544&format=png&color=000000'
         : 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000';
     $('#typeIcon').attr('src', icon);
-
-    if (data.state) {
-        $('<span>')
-            .addClass('state-label')
-            .text('State: ' + data.state)
-            .prependTo('.state-box');
-    }
+    $('.state-box .state-label').remove();
+    if (data.currentstate) {
+	    $('.state-box .state-label').remove();
+	    const state = data.currentstate;
+	    const badge = $('<span>')
+	        .addClass('state-badge ' + state.replace(/\s/g, ''))
+	        .text(state);
+	    $('<span>')
+	        .addClass('state-label')
+	        .text('State: ')
+	        .append(badge)
+	        .prependTo('.state-box');
+	}
 }
+
 function populateTable(part) {
     const table = $('#detailsTable');
     table.empty();
@@ -588,7 +615,6 @@ function openEditPanel(part) {
             .addClass('form-label')
             .attr('for', safeId)
             .text(label);
-
         const inputEl = $('<input>')
             .attr('type', 'text')
             .addClass('form-control')

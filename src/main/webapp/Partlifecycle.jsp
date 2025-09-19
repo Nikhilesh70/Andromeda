@@ -9,7 +9,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Part LifeCycle</title>
+<title>Part Control LifeCycle</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -378,9 +378,9 @@ table.properties th {
   transition: background 0.3s ease;
 }
 
-.state-node#stateFrozen { background-color: #6c757d; }
-.state-node#stateApproved { background-color: #28a745; }
-.state-node#stateReleased { background-color: #ffc107; color: #000; }
+.state-node#stateInApproval { background-color: #6c757d; }
+.state-node#stateCompleted { background-color: #28a745; }
+.state-node#stateCancelled { background-color: #ffb6b6; color: #000; }
 
 .arrow {
   margin: 0 15px;
@@ -397,10 +397,39 @@ table.properties th {
   50% { color: #007bff; transform: scale(1.5); }
   100% { color: #999; transform: scale(1); }
 }
-
 .arrow.animate {
   animation: arrowPulse 0.8s ease-in-out;
 }
+  .state-box .state-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  margin-left: 8px;
+  user-select: none;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+}
+.state-badge.InWork {
+  background-color: #5bc0de;
+}
+
+.state-badge.InApproval {
+  background-color: #6c757d;
+}
+
+.state-badge.Completed {
+  background-color: #28a745;
+}
+
+.state-badge.Cancelled {
+  background-color: #000000; 
+  color: #ffffff; 
+}
+  
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
@@ -419,8 +448,7 @@ table.properties th {
   <div class="right-section">
     <div class="state-box">
       <span class="state-label">State:</span>
-      <button id="submitBtn" class="btn-submit">InWork</button>
-      <button id="evaluateBtn" class="btn-evaluate">InApproval</button>
+
     </div>
     <div class="vertical-line"></div>
     <div class="info-box">
@@ -445,9 +473,9 @@ table.properties th {
 	</div>
     <div class="lifecycle-flow">
   <div class="state-node" id="stateInWork" data-state="InWork" title="Click to change to 'In Work'">In Work</div>
-  <div class="arrow" id="arrow-InWork-In Approval">➝</div>
-  <div class="state-node" id="stateInApproval" data-state="In Approval" title="Click to change to 'Frozen'">In Approval</div>
-  <div class="arrow" id="arrow-In Approval-Completed">➝</div>
+  <div class="arrow" id="arrow-InWork-InApproval">➝</div>
+  <div class="state-node" id="stateInApproval" data-state="InApproval" title="Click to change to 'Frozen'">In Approval</div>
+  <div class="arrow" id="arrow-InApproval-Completed">➝</div>
   <div class="state-node" id="stateCompleted" data-state="Completed" title="Click to change to 'Approved'">Completed</div>
   <div class="arrow" id="arrow-Completed-Cancelled">➝</div>
   <div class="state-node" id="stateCancelled" data-state="Cancelled" title="Click to change to 'Released'">Cancelled</div>
@@ -514,14 +542,19 @@ $(document).ready(function() {
              : 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000';
 
          $('#typeIcon').attr('src', icon);
-
          $('.state-box .state-label').remove();
-         if (partInfo.state) {
-             $('<span>')
-                 .addClass('state-label')
-                 .text('State: ' + partInfo.state)
-                 .prependTo('.state-box');
-         }
+         if (partInfo.currentstate) {
+        	    $('.state-box .state-label').remove();
+        	    const state = partInfo.currentstate;
+        	    const badge = $('<span>')
+        	        .addClass('state-badge ' + state.replace(/\s/g, ''))
+        	        .text(state);
+        	    $('<span>')
+        	        .addClass('state-label')
+        	        .text('State: ')
+        	        .append(badge)
+        	        .prependTo('.state-box');
+        	}
      } else {
          $('.part-number').text('');
          $('.part-type').text('');
@@ -561,6 +594,10 @@ $(document).ready(function() {
             data: JSON.stringify({ state: selectedState }),
             success: function(response) {
                 setLoading(false);
+                if (response.error) {
+                    showMessage(response.error, true); 
+                    return;
+                }
                 highlightCurrentState(selectedState);
                 showMessage("State successfully changed to " + selectedState);
             },
