@@ -9,7 +9,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Part Management</title>
+<title>PartControl Management</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -17,8 +17,6 @@
     background: #fff;
     color: #333;
   }
-
-  /* Top Bar Container */
   .topbar {
     display: flex;
     background: #f5f7fa;
@@ -28,7 +26,6 @@
     color: #333;
   }
 
-  /* Box styling */
   .topbar > div {
     display: flex;
     align-items: center;
@@ -39,12 +36,10 @@
     white-space: nowrap;
   }
 
-  /* Last box has right border */
   .topbar > div:last-child {
     border-right: 1px solid #cfd3db;
   }
 
-  /* Folder Icon Box */
   .folder-box {
     background: #e3e7eb;
     border: 1px solid #d1d6dc;
@@ -62,7 +57,6 @@
     height: 16px;
   }
 
-  /* Part Number box */
   .part-number {
     font-weight: 700;
     font-size: 14px;
@@ -72,7 +66,6 @@
     margin-right: 12px;
   }
 
-  /* Description box */
   .description {
     font-weight: 600;
     font-size: 13px;
@@ -82,7 +75,6 @@
     margin-right: 12px;
   }
 
-  /* State box */
   .state-box {
     font-weight: 600;
     font-size: 13px;
@@ -98,7 +90,6 @@
     margin-right: 4px;
   }
 
-  /* Buttons styling */
   .btn-submit {
     background-color: #5c8bff;
     border: 1px solid #3f70ff;
@@ -129,7 +120,6 @@
     background-color: #c6cad2;
   }
 
-  /* Info box */
   .info-box {
     font-size: 11px;
     color: #666;
@@ -141,15 +131,14 @@
     color: #444;
   }
 
-  /* Adjust spacing between boxes */
   .topbar > div:not(:last-child) {
-    margin-right: -1px; /* To collapse adjacent borders */
+    margin-right: -1px; 
   }
 	
 	.vertical-line img {
-  height: 20px;  /* Adjust height to make it appear like a line */
-  width: 1px;    /* Make it thin like a vertical line */
-  margin: 0 10px; /* Space around the line */
+  height: 20px;  
+  width: 1px;   
+  margin: 0 10px;
 }
 
   .container {
@@ -187,8 +176,6 @@
   color: white;
    font-weight: bold;
 }
-
-/* Main Panel */
 .main-panel {
   flex-grow: 1;
   padding: 20px;
@@ -196,8 +183,6 @@
   font-size: 13px;
   box-sizing: border-box;
 }
-
-
 .container {
   display: flex;
   height: calc(100vh - 56px); 
@@ -235,7 +220,7 @@
   }
 
 table.properties {
-  width: 100%; /* full width */
+  width: 100%; 
   border-collapse: collapse;
   border: 1px solid #ddd;
   font-size: 16px;
@@ -246,14 +231,14 @@ table.properties {
 table.properties th,
 table.properties td {
   padding: 12px 16px;
-  border: 1px solid #ddd; /* add borders on all cells */
+  border: 1px solid #ddd; 
   vertical-align: middle;
 }
 
 table.properties th {
   background: #fafafa;
   font-weight: bold;
-  width: 200px; /* label column width */
+  width: 200px; 
   text-align: left;
 }
 
@@ -271,7 +256,6 @@ table.properties th {
   margin-top: 0;
 }
 
-  /* Loading Spinner */
   #loadingSpinner {
     display: none;
     position: fixed;
@@ -280,8 +264,6 @@ table.properties th {
     font-size: 14px;
     color: #666;
   }
-
-  
   #errorMessage {
     display: none;
     color: red;
@@ -342,6 +324,46 @@ forn-wrap-mode:nowrap;
             width: 100%;
             height: calc(100% - 56px);
         }
+  .section-label{
+   font-weight:bold;
+   font-size:14px;
+   margin:10px 0 5px 0;
+   color:#333;
+  }      
+  #partSpecificationTable, #addExistingDataTable {
+    display: none;
+}
+  .state-box .state-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  margin-left: 8px;
+  user-select: none;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+}
+.state-badge.InWork {
+  background-color: #5bc0de;
+}
+
+.state-badge.InApproval {
+  background-color: #6c757d;
+}
+
+.state-badge.Completed {
+  background-color: #28a745;
+}
+
+.state-badge.Cancelled {
+  background-color: #000000;
+  color: #ffffff;
+}
+  
+  
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -365,8 +387,7 @@ forn-wrap-mode:nowrap;
     <div class="right-section">
         <div class="state-box">
             <span class="state-label">State:</span>
-            <button id="submitBtn" class="btn-submit">InWork</button>
-            <button id="evaluateBtn" class="btn-evaluate">InApproval</button>
+   
         </div>
         <div class="vertical-line"></div>
         <div class="info-box"></div>
@@ -391,17 +412,29 @@ forn-wrap-mode:nowrap;
         </div>
         <div id="loadingSpinner"></div>
         <div id="errorMessage" class="error"></div>
-        <table id="detailsTable" class="properties"></table>
-    </div>
+        <div class="section-label">PartControlManagementTable</div>
     <table class="table table-bordered mt-2" id="partControlTable">
-        <thead></thead>
-        <tbody></tbody>
-    </table>
-
-    <div id="createPanel">
+    <thead>
+        <tr>
+        </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+<div class="section-label">AddExistingParts</div>
+ <table class="table table-bordered mt-2" id="addExistingDataTable">
+    <thead>
+        <tr>
+        </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+</div>
+ <div id="createPanel">
         <iframe id="createIframe" src=""></iframe>
     </div>
-</div>
+    </div>
 <script>
 function receiveSelectedParts(selectedParts) {
     if (!selectedParts || selectedParts.length === 0) {
@@ -428,44 +461,51 @@ function receiveSelectedParts(selectedParts) {
 }
 function loadPartControlTable() {
     $('#errorMessage').text('Loading part controls...');
-
+    $('.section-label:contains("PartControlTable")').hide();
     const urlParams = new URLSearchParams(window.location.search);
     const objectid = urlParams.get('name');
-
     if (!objectid) {
         $('#errorMessage').text('Missing object ID.');
         return;
     }
-
     $.ajax({
-        url: 'http://localhost:8080/andromeda/api/searchdata/getpartcontrol',
+        url: 'http://localhost:8080/andromeda/api/datafetchservice/getpartcontrolfrompc',
         data: { objectid: objectid },
         dataType: 'json',
         cache: false,
         success: function(data) {
             $('#errorMessage').text('');
 
-            if (!data || data.length === 0 || data.message) {
-                $('#errorMessage').text(data.message || 'No part controls found.');
+            if (!data || !Array.isArray(data) || data.length === 0 || data.message) {
+                $('#errorMessage').text(data ? data.message || 'No part Control found.' : 'Error loading data.');
                 if ($.fn.DataTable.isDataTable('#partControlTable')) {
                     $('#partControlTable').DataTable().clear().draw();
                 }
+                $('.section-label:contains("partControlTable")').hide();
+                $('#partControlTable').hide();
                 return;
             }
+            $('.section-label:contains("partControlTable")').show();
+            $('#partControlTable').show();
 
-            let keys = Object.keys(data[0]);
-            const excludeKeys = ['fts_document','objectid','linkedobjectid','connectionid'];
-            keys = keys.filter(k => !excludeKeys.includes(k));
-
-            const columns = keys.map(key => ({
-                data: key,
-                title: key.charAt(0).toUpperCase() + key.slice(1)
-               
-            }));
+            const excludedFields = ['objectid', 'linkedobjectid', 'connectionid', 'fts_document'];
+            const columns = Object.keys(data[0])  
+                .filter(key => !excludedFields.includes(key))
+                .map(key => ({
+                    data: key,
+                    title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
+                }));
 
             if ($.fn.DataTable.isDataTable('#partControlTable')) {
                 $('#partControlTable').DataTable().destroy();
             }
+            const thead = $('#partControlTable thead');
+            thead.empty();
+            const headerRow = $('<tr></tr>');
+            columns.forEach(col => {
+                headerRow.append(`<th>${col.title}</th>`);
+            });
+            thead.append(headerRow);
 
             $('#partControlTable').DataTable({
                 data: data,
@@ -484,17 +524,103 @@ function loadPartControlTable() {
         }
     });
 }
+function loadAddExistingPartTable() {
+    $('#errorMessage').text('Loading Add Existing parts...');
+    $('.section-label:contains("AddExistingParts")').hide();
+    $('#addExistingDataTable').hide();
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const objectid = urlParams.get('name');
+
+    if (!objectid) {
+        $('#errorMessage').text('Missing object ID.');
+        return;
+    }
+
+    $.ajax({
+        url: 'http://localhost:8080/andromeda/api/datafetchservice/getaddexisting',
+        data: { objectid: objectid },
+        dataType: 'json',
+        cache: false,
+        success: function(data) {
+            $('#errorMessage').text('');
+            if (!data || !Array.isArray(data) || data.length === 0 || data.message) {
+                $('#errorMessage').text(data ? data.message || 'No part Connection data found.' : 'Error loading data.');
+                if ($.fn.DataTable.isDataTable('#addExistingDataTable')) {
+                    $('#addExistingDataTable').DataTable().clear().destroy();
+                }
+                $('.section-label:contains("AddExistingParts")').hide();
+                $('#addExistingDataTable').hide();
+                return;
+            }
+
+            $('.section-label:contains("AddExistingParts")').show();
+            $('#addExistingDataTable').show();
+
+            const excludedFields = ['connectionid'];
+            const columns = Object.keys(data[0])
+                .filter(key => !excludedFields.includes(key))
+                .map(key => ({
+                    data: key,
+                    title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
+                }));
+
+            if ($.fn.DataTable.isDataTable('#addExistingDataTable')) {
+                $('#addExistingDataTable').DataTable().clear().destroy();
+            }
+
+            const thead = $('#addExistingDataTable thead');
+            thead.empty();
+            const headerRow = $('<tr></tr>');
+            columns.forEach(col => {
+                headerRow.append(`<th>${col.title}</th>`);
+            });
+            thead.append(headerRow);
+
+            $('#addExistingDataTable').DataTable({
+                data: data,
+                columns: columns,
+                order: [[columns.findIndex(c => c.data === 'createddate') || 0, 'desc']],
+                paging: false,
+                searching: false,
+                scrollX: true,
+                info: false,
+                destroy: true
+            });
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX error:', status, error);
+            $('#errorMessage').text('Failed to load part connections.');
+            $('.section-label:contains("AddExistingParts")').hide();
+            $('#addExistingDataTable').hide();
+        }
+    });
+}
     $(document).ready(function() {
         loadPartControlTable();
+        loadAddExistingPartTable();
 	const partInfo = JSON.parse(sessionStorage.getItem('partInfo'));
         
         if (partInfo) {
-          $('.part-number').text(partInfo.name || 'N/A');
-          $('.part-type').text(partInfo.type || 'N/A');
-        } else {
-          $('.part-number').text('N/A');
-          $('.part-type').text('N/A');
+          $('.part-number').text(partInfo.name || 'NA');
+          $('.part-type').text(partInfo.type || 'NA');
+          $('.state-box .state-label').remove();
+          if (partInfo.currentstate) {
+      	    $('.state-box .state-label').remove();
+      	    const state = partInfo.currentstate;
+      	    const badge = $('<span>')
+      	        .addClass('state-badge ' + state.replace(/\s/g, ''))
+      	        .text(state);
+      	    $('<span>')
+      	        .addClass('state-label')
+      	        .text('State: ')
+      	        .append(badge)
+      	        .prependTo('.state-box');
+      	}
+        }
+        else {
+          $('.part-number').text('NA');
+          $('.part-type').text('NA');
         }
         document.getElementById('openCreatePanelBtn').addEventListener('click', function () {
             const urlParams = new URLSearchParams(window.location.search);
@@ -522,28 +648,23 @@ function loadPartControlTable() {
             alert('No object ID found!');
         }
     });
+    window.addEventListener('message', function(event) {
+        if (!event.data) return;
+
+        if (event.data.action === 'closeOnly') {
+            document.getElementById('createPanel').classList.remove('active');
+        } else if (event.data.action === 'closeAndRefresh') {
+            document.getElementById('createPanel').classList.remove('active');
+            loadPartSpecificationTable();
+        } else if (event.data && event.data.selectedParts) {
+            receiveSelectedParts(event.data.selectedParts);
+        }
+    });
     function closeCreatePanel() {
         const panel = document.getElementById('createPanel');
         panel.classList.remove('active');
-        document.getElementById('createIframe').src = ''; 
+        document.getElementById('createIframe').src = '';
     }
-
-    window.addEventListener('message', function (event) {
-  	  const action = event.data?.action;
-  	  const createPanel = document.getElementById('createPanel');
-
-  	  if (!createPanel) return;
-
-  	  if (action === 'closeOnly') {
-  	    createPanel.classList.remove('active');
-  	  }
-
-  	  if (action === 'closeAndRefresh') {
-  	    createPanel.classList.remove('active');
-
-  	    refreshPartControlList(); 
-  	  }
-  	});
 </script>
 </body>
 </html>

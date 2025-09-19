@@ -50,6 +50,7 @@
 
   h1 {
     text-align: center;
+    font-family:Courier New;
     font-size: 24px;
     margin-bottom: 20px;
   }
@@ -64,6 +65,7 @@
   .input-field input {
     padding: 8px;
     font-size: 14px;
+    font-family: Courier New;
     width: 800px;
     height: 40px;
     border: 1px solid #ccc;
@@ -85,7 +87,7 @@
   }
 
   .text-area-container {
-    position: relative; /* Needed for overlay positioning */
+    position: relative; 
     flex-grow: 1;
     display: flex;
     flex-direction: column;
@@ -96,11 +98,11 @@
     width: 100%;
     height: 100%;
     padding: 8px;
-    font-size: 14px;
+    font-size: 12.5px;
     border: 1px solid #ccc;
     border-radius: 4px;
     resize: none;
-    font-family: "Sitka Subheading Semibold", sans-serif;
+    font-family: Courier New;
     box-sizing: border-box;
     flex-grow: 1;
   }
@@ -257,7 +259,7 @@
       function runQuery(query) {
         $("#loadingSpinnerOverlay").show();
 
-        const minSpinnerTime = 5000; 
+        const minSpinnerTime = 3000; 
         const spinnerStartTime = Date.now();
 
         $.ajax({
@@ -279,7 +281,7 @@
             }
             runQuery.resultText = errorMessage;
 
-            setTimeout(() => $("#textArea").val(""), 5000);
+            setTimeout(() => $("#textArea").val(""), 4000);
           },
           complete: function () {
             const elapsed = Date.now() - spinnerStartTime;

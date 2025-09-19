@@ -157,13 +157,12 @@
   }
 
 .sidebar {
-  width: 16%;
+  width: 19%;
   background-color: #f8f9fa;
   border-right: 1px solid #ddd;
   padding: 20px;
   font-size: 14px;
   box-sizing: border-box;
-   resize: horizontal;
   overflow-y: auto;
   overflow-x: hidden; 
 }
@@ -386,7 +385,6 @@ table.properties th {
   color: #999;
 }
 
-/* Highlight current state */
 .state-node.active {
   border: 3px solid #444;
   box-shadow: 0 0 8px rgba(0,0,0,0.3);
@@ -396,9 +394,38 @@ table.properties th {
   50% { color: #007bff; transform: scale(1.5); }
   100% { color: #999; transform: scale(1); }
 }
-
 .arrow.animate {
   animation: arrowPulse 0.8s ease-in-out;
+}
+
+.state-box .state-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  margin-left: 8px;
+  user-select: none;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+}
+.state-badge.InWork {
+  background-color: #5bc0de;
+}
+
+.state-badge.Frozen {
+  background-color: #6c757d;
+}
+
+.state-badge.Approved {
+  background-color: #28a745;
+}
+
+.state-badge.Released {
+  background-color: #ffc107;
+  color: #000;
 }
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -418,12 +445,9 @@ table.properties th {
   <div class="right-section">
     <div class="state-box">
       <span class="state-label">State:</span>
-      <button id="submitBtn" class="btn-submit">InWork</button>
-      <button id="evaluateBtn" class="btn-evaluate">Frozen</button>
     </div>
     <div class="vertical-line"></div>
     <div class="info-box">
-      
     </div>
     <div class="vertical-line"></div>
   </div>
@@ -435,6 +459,8 @@ table.properties th {
     <a href="Lifecycle.jsp?name=<%= request.getParameter("name") %>" class="active">LifeCycle</a>
     <a href="ControlManagement.jsp?name=<%= request.getParameter("name") %>">Control Management</a>
     <a href="PartSpecification.jsp?name=<%= request.getParameter("name") %>">Part Specification</a>
+  	<a class="nav-link" href="SpecificationDocumentUpload.jsp?name=<%=request.getParameter("name") %>">SpecificationDocument</a>
+    
   </div>
   <div class="main-panel">
     <!-- Toolbar -->
@@ -452,8 +478,7 @@ table.properties th {
   <div class="arrow" id="arrow-Approved-Released">➝</div>
   <div class="state-node" id="stateReleased" data-state="Released" title="Click to change to 'Released'">Released</div>
 </div>
-
-        <div id="stateMessages"></div>
+   <div id="stateMessages"></div>
     <div id="loadingSpinner"></div>
     <div id="errorMessage"></div>
     </div>
@@ -515,14 +540,19 @@ $(document).ready(function() {
              : 'https://img.icons8.com/?size=50&id=OCre7GSjDUBi&format=png&color=000000';
 
          $('#typeIcon').attr('src', icon);
-
          $('.state-box .state-label').remove();
-         if (partInfo.state) {
-             $('<span>')
-                 .addClass('state-label')
-                 .text('State: ' + partInfo.state)
-                 .prependTo('.state-box');
-         }
+         if (partInfo.currentstate) {
+        	    $('.state-box .state-label').remove();
+        	    const state = partInfo.currentstate;
+        	    const badge = $('<span>')
+        	        .addClass('state-badge ' + state.replace(/\s/g, ''))
+        	        .text(state);
+        	    $('<span>')
+        	        .addClass('state-label')
+        	        .text('State: ')
+        	        .append(badge)
+        	        .prependTo('.state-box');
+        	}
      } else {
          $('.part-number').text('');
          $('.part-type').text('');
@@ -562,6 +592,10 @@ $(document).ready(function() {
             data: JSON.stringify({ state: selectedState }),
             success: function(response) {
                 setLoading(false);
+                if (response.error) {
+                    showMessage(response.error, true); 
+                    return;
+                }
                 highlightCurrentState(selectedState);
                 showMessage("State successfully changed to " + selectedState);
             },

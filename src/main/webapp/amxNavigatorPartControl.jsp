@@ -42,6 +42,32 @@
     table.dataTable a:hover {
       text-decoration: underline;
     }
+  .state-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  margin-left: 8px;
+  user-select: none;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+}
+.state-badge.InWork {
+  background-color: #5bc0de;
+}
+.state-badge.InApproval {
+  background-color: #6c757d;
+}
+.state-badge.Completed {
+  background-color: #28a745;
+}
+.state-badge.Cancelled {
+  background-color: #000000;
+  color: #ffffff;
+}
   </style>
 </head>
 <body>
@@ -53,7 +79,6 @@
     </table>
     <div class="error" id="errorMessage"></div>
   </div>
-
   <script>
     $(document).ready(function () {
       $.ajax({
@@ -66,8 +91,8 @@
             return;
           }
 
-          const dataArray = response; 
-          const desiredColumns = ["name", "supertype", "type", "description", "createddate", "owner", "email", "assignee"];
+          const dataArray = response;
+          const desiredColumns = ["name", "supertype", "type", "description", "createddate", "owner", "email", "assignee", "currentstate"];
 
           const $theadTr = $('#partsTable thead tr');
           $theadTr.empty();
@@ -90,16 +115,25 @@
                 render: function (data) {
                   const date = new Date(data);
                   if (!isNaN(date.getTime())) {
-                    return date.toLocaleString(); 
+                    return date.toLocaleString();
                   }
                   return data || '';
+                }
+              });
+            } else if (key === 'currentstate') {
+              columns.push({
+                data: 'currentstate',
+                render: function (data) {
+                  if (!data) return '';
+                  const stateClass = data.replace(/\s+/g, ''); 
+                  return '<span class="state-badge ' + stateClass + '">' + data + '</span>';
                 }
               });
             } else {
               columns.push({
                 data: key,
                 render: function (data) {
-                  return data || 'N/A'; 
+                  return data || 'N/A';
                 }
               });
             }

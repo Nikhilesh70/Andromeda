@@ -18,7 +18,6 @@
     color: #333;
   }
 
-  /* Top Bar Container */
   .topbar {
     display: flex;
     background: #f5f7fa;
@@ -28,7 +27,6 @@
     color: #333;
   }
 
-  /* Box styling */
   .topbar > div {
     display: flex;
     align-items: center;
@@ -39,12 +37,10 @@
     white-space: nowrap;
   }
 
-  /* Last box has right border */
   .topbar > div:last-child {
     border-right: 1px solid #cfd3db;
   }
 
-  /* Folder Icon Box */
   .folder-box {
     background: #e3e7eb;
     border: 1px solid #d1d6dc;
@@ -62,7 +58,6 @@
     height: 16px;
   }
 
-  /* Part Number box */
   .part-number {
     font-weight: 700;
     font-size: 14px;
@@ -71,7 +66,6 @@
     margin-right: 12px;
   }
 
-  /* Description box */
   .description {
     font-weight: 600;
     font-size: 13px;
@@ -81,7 +75,6 @@
     margin-right: 12px;
   }
 
-  /* State box */
   .state-box {
     font-weight: 600;
     font-size: 13px;
@@ -97,7 +90,6 @@
     margin-right: 4px;
   }
 
-  /* Buttons styling */
   .btn-submit {
     background-color: #5c8bff;
     border: 1px solid #3f70ff;
@@ -128,7 +120,6 @@
     background-color: #c6cad2;
   }
 
-  /* Info box */
   .info-box {
     font-size: 11px;
     color: #666;
@@ -139,16 +130,14 @@
   .info-box strong {
     color: #444;
   }
-
-  /* Adjust spacing between boxes */
   .topbar > div:not(:last-child) {
-    margin-right: -1px; /* To collapse adjacent borders */
+    margin-right: -1px; 
   }
 	
 	.vertical-line img {
-  height: 20px;  /* Adjust height to make it appear like a line */
-  width: 1px;    /* Make it thin like a vertical line */
-  margin: 0 10px; /* Space around the line */
+  height: 20px;  
+  width: 1px;    
+  margin: 0 10px;
 }
 
   .container {
@@ -157,13 +146,12 @@
     font-size: 13px;
   }
 .sidebar {
-  width: 16%;
+  width: 20%;
   background-color: #f8f9fa;
   border-right: 1px solid #ddd;
   padding: 20px;
   font-size: 14px;
   box-sizing: border-box;
-   resize: horizontal;
   overflow-y: auto;
   overflow-x: hidden; 
 }
@@ -186,8 +174,6 @@
   color: white;
    font-weight: bold;
 }
-
-/* Main Panel */
 .main-panel {
   flex-grow: 1;
   padding: 20px;
@@ -195,7 +181,6 @@
   font-size: 13px;
   box-sizing: border-box;
 }
-
 
 .container {
   display: flex;
@@ -234,7 +219,7 @@
   }
 
 table.properties {
-  width: 100%; /* full width */
+  width: 100%; 
   border-collapse: collapse;
   border: 1px solid #ddd;
   font-size: 16px;
@@ -245,14 +230,14 @@ table.properties {
 table.properties th,
 table.properties td {
   padding: 12px 16px;
-  border: 1px solid #ddd; /* add borders on all cells */
+  border: 1px solid #ddd; 
   vertical-align: middle;
 }
 
 table.properties th {
   background: #fafafa;
   font-weight: bold;
-  width: 200px; /* label column width */
+  width: 200px;
   text-align: left;
 }
 
@@ -269,8 +254,6 @@ table.properties th {
   border: 1px solid #ddd;
   margin-top: 0;
 }
-
-  /* Loading Spinner */
   #loadingSpinner {
     display: none;
     position: fixed;
@@ -280,7 +263,6 @@ table.properties th {
     color: #666;
   }
 
-  
   #errorMessage {
     display: none;
     color: red;
@@ -351,14 +333,39 @@ forn-wrap-mode:nowrap;
     margin: 10px 0 5px 0;
     color: #333;
   }
-  
+ .state-box .state-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  margin-left: 8px;
+  user-select: none;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+}
+.state-badge.InWork {
+  background-color: #5bc0de;
+}
+.state-badge.Frozen {
+  background-color: #6c757d;
+}
+.state-badge.Approved {
+  background-color: #28a745;
+}
+.state-badge.Released {
+  background-color: #ffc107;
+  color: #000;
+}   
+
 </style>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
-
  <script>var loggedInUserAccess = '<%= userAccess.trim() %>';</script>
 </head>
 <body>
@@ -377,8 +384,6 @@ forn-wrap-mode:nowrap;
     <div class="right-section">
         <div class="state-box">
             <span class="state-label">State:</span>
-            <button id="submitBtn" class="btn-submit">InWork</button>
-            <button id="evaluateBtn" class="btn-evaluate">Frozen</button>
         </div>
         <div class="vertical-line"></div>
         <div class="info-box"></div>
@@ -404,7 +409,6 @@ forn-wrap-mode:nowrap;
             <img src="https://img.icons8.com/?size=100&id=K0l4dwcsMaJa&format=png&color=000000" alt="Add" style="width: 20px; height: 20px;">
         </button>
     </div>
-
     <div id="loadingSpinner"></div>
     <div id="errorMessage" class="error"></div>
         <div class="section-label">PartControlTable</div>
@@ -427,7 +431,6 @@ function receiveSelectedParts(selectedParts) {
         console.log("No parts selected.");
         return; 
     }
-    console.log("Received selected parts:", selectedParts);
     let table = $('#partControlTable').DataTable();
     if (!table) {
         console.log("Table not initialized. Initializing...");
@@ -455,7 +458,6 @@ function loadPartControlTable() {
         $('#errorMessage').text('Missing object ID.');
         return;
     }
-
     $.ajax({
         url: 'http://localhost:8080/andromeda/api/datafetchservice/getcreatedpartcontrol',
         data: { objectid: objectid },
@@ -526,12 +528,18 @@ function loadPartControlTable() {
 
             $('#typeIcon').attr('src', icon);
             $('.state-box .state-label').remove();
-            if (partInfo.state) {
-                $('<span>')
-                    .addClass('state-label')
-                    .text('State: ' + partInfo.state)
-                    .prependTo('.state-box');
-            }
+            if (partInfo.currentstate) {
+        	    $('.state-box .state-label').remove();
+        	    const state = partInfo.currentstate;
+        	    const badge = $('<span>')
+        	        .addClass('state-badge ' + state.replace(/\s/g, ''))
+        	        .text(state);
+        	    $('<span>')
+        	        .addClass('state-label')
+        	        .text('State: ')
+        	        .append(badge)
+        	        .prependTo('.state-box');
+        	}
         } else {
             $('.part-number').text('');
             $('.part-type').text('');

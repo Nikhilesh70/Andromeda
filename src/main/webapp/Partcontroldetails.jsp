@@ -339,13 +339,41 @@ table.properties th {
   #cancelBtn:hover {
     background-color: #c6cad2;
   }
+  .state-box .state-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  margin-left: 8px;
+  user-select: none;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+}
+.state-badge.InWork {
+  background-color: #5bc0de;
+}
+
+.state-badge.InApproval {
+  background-color: #6c757d;
+}
+
+.state-badge.Completed {
+  background-color: #28a745;
+}
+
+.state-badge.Cancelled {
+  background-color: #000000;
+  color: #ffffff;
+}
+  
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-
 <div class="topbar">
-
   <div class="left-section">
     <div class="image-box">
       <img src="https://img.icons8.com/?size=50&id=WECphWgmeM0g&format=png&color=000000" alt="Folder Icon" />
@@ -354,19 +382,14 @@ table.properties th {
       <div class="part-number" style="font-weight: 700; font-size: 14px;"></div>
       <div class="part-type" style="font-size: 12px; color: #666; margin-top: 2px; padding-left:13px;"></div>
     </div>
-
     <div class="vertical-line"></div>
   </div>
-
   <div class="right-section">
     <div class="state-box">
       <span class="state-label">State:</span>
-      <button id="submitBtn" class="btn-submit">InWork</button>
-      <button id="evaluateBtn" class="btn-evaluate">InApproval</button>
     </div>
     <div class="vertical-line"></div>
     <div class="info-box">
-      
     </div>
     <div class="vertical-line"></div>
   </div>
@@ -508,14 +531,20 @@ $(document).ready(function () {
     $('.part-type').text(data.type || '');
     $('.part-owner').text(data.owner || '');
     $('.part-created').text(data.createddate || '');
-    if (data.state) {
-      $('<span>')
-        .addClass('state-label')
-        .text('State: ' + data.state)
-        .prependTo('.state-box');
-    }
+    $('.state-box .state-label').remove();
+    if (data.currentstate) {
+	    $('.state-box .state-label').remove();
+	    const state = data.currentstate;
+	    const badge = $('<span>')
+	        .addClass('state-badge ' + state.replace(/\s/g, ''))
+	        .text(state);
+	    $('<span>')
+	        .addClass('state-label')
+	        .text('State: ')
+	        .append(badge)
+	        .prependTo('.state-box');
+	}
   }
-
   function populateTable(part) {
     const table = $('#detailsTable');
     table.empty();

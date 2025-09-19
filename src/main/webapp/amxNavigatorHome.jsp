@@ -217,7 +217,6 @@
         <b class="ms-2">ANDROMEDA</b>
       </div>
       
-      <!-- Add a wrapper for the search bar and make it centered -->
       <div class="search-wrapper">
   <form id="searchForm">
     <div class="input-group">
@@ -236,7 +235,6 @@
       </button>
       <div class="collapse navbar-collapse" id="headerComponents">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-items-center">
-          <!-- Other navbar items will remain the same -->
         </ul>
         <ul class="navbar-nav mb-2 mb-lg-0 align-items-center">
           <li class="nav-item ms-3">
@@ -271,11 +269,8 @@
       </div>
     </div>
 </nav>
-
-
   <div class="panels-container">
     <div class="left-panel">
-    
       <ul class="nav flex-column">
   <li class="nav-item">
     <a class="nav-link" href="#" onclick="loadRightPanel('amxNavigatorParts.jsp')">Parts</a>
@@ -286,13 +281,13 @@
    <li class="nav item">
   <a class="nav-link" href="#" onclick="loadRightPanel('amxNavigatorPartControl.jsp')">PartControl</a>
   </li>
-  <li class="nav-item"><a class="nav-link" href="#" onclick="loadRightPanel('amxPartSpecification.jsp')">Part Specification</a></li>
-  <li class="nav-item"><a class="nav-link" href="#" onclick="loadRightPanel('amxRunSql.jsp')">RunSQL</a></li>
+  <li class="nav-item">
+  <a class="nav-link" href="#" onclick="loadRightPanel('amxRunSql.jsp')">RunSQL</a>
+  </li>
 </ul>
     </div>
    <iframe class="right-panel" id="contentFrame"  name="contentFrame" src="" frameborder="0"></iframe>
   </div>
-
   <div id="myModal" class="modal">
     <div class="modal-content">
       <span class="close-button"></span>

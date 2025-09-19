@@ -147,13 +147,12 @@
     font-size: 13px;
   }
 .sidebar {
-  width: 16%;
+  width: 19%;
   background-color: #f8f9fa;
   border-right: 1px solid #ddd;
   padding: 20px;
   font-size: 14px;
   box-sizing: border-box;
-   resize: horizontal;
   overflow-y: auto;
   overflow-x: hidden; 
 }
@@ -339,11 +338,35 @@ forn-wrap-mode:nowrap;
     margin: 10px 0 5px 0;
     color: #333;
   }
-  
 #partSpecificationTable, #addExistingDataTable {
     display: none;
 }
-
+ .state-box .state-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  margin-left: 8px;
+  user-select: none;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+}
+.state-badge.InWork {
+  background-color: #5bc0de;
+}
+.state-badge.Frozen {
+  background-color: #6c757d;
+}
+.state-badge.Approved {
+  background-color: #28a745;
+}
+.state-badge.Released {
+  background-color: #ffc107;
+  color: #000;
+} 
 </style>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -369,8 +392,7 @@ forn-wrap-mode:nowrap;
     <div class="right-section">
         <div class="state-box">
             <span class="state-label">State:</span>
-            <button id="submitBtn" class="btn-submit">InWork</button>
-            <button id="evaluateBtn" class="btn-evaluate">Frozen</button>
+
         </div>
         <div class="vertical-line"></div>
         <div class="info-box"></div>
@@ -604,12 +626,18 @@ function loadAddExistingPartTable() {
 
             $('#typeIcon').attr('src', icon);
             $('.state-box .state-label').remove();
-            if (partInfo.state) {
-                $('<span>')
-                    .addClass('state-label')
-                    .text('State: ' + partInfo.state)
-                    .prependTo('.state-box');
-            }
+            if (partInfo.currentstate) {
+        	    $('.state-box .state-label').remove();
+        	    const state = partInfo.currentstate;
+        	    const badge = $('<span>')
+        	        .addClass('state-badge ' + state.replace(/\s/g, ''))
+        	        .text(state);
+        	    $('<span>')
+        	        .addClass('state-label')
+        	        .text('State: ')
+        	        .append(badge)
+        	        .prependTo('.state-box');
+        	}
         } else {
             $('.part-number').text('');
             $('.part-type').text('');
