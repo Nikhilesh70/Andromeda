@@ -1,0 +1,33 @@
+              SQLQueries
+								
+1)View All Data --- SELECT * FROM table_name;
+2)Limit the Number of rows --- SELECT * FROM table_name LIMIT 5 or 10;
+3)To find any specific row record --- SELECT * FROM table_name WHERE column_name = '';
+4)Search by partial data--- SELECT * FROM table_name WHERE column_name LIKE '% ----%'; 
+5)To find All Parts Owned by a Specific person --- SELECT * FROM table_name WHERE column_name = ' ';
+6)To get count of data in the table --- SELECT COUNT(*) FROM table_name;
+7)To find data which values are missing --- SELECT * FROM table_name WHERE column_name IS NULL;
+8)To get selected records like APN, Name, Owner --- SELECT column_name1, column_name3 FROM table_name;
+9)To keep the data in order like new data first --- SELECT * FROM table_name ORDER BY column_name DESC;
+10)To filter the multiple values (use IN) --- SELECT * FROM table_name WHERE column_name IN ('coder22', 'nikhil16');
+11)To filter the data using range --- SELECT * FROM table_name WHERE column_name BETWEEN '' AND '';
+12)To filter with multiple conditions --- SELECT * FROM table_name WHERE column_name = '' AND column_name = '';
+13)Sort the data in alphabetical order --- SELECT * FROM table_name ORDER BY column_name ASC;
+14)Search by objected --- SELECT * FROM table_name WHERE column_name =;
+15)To delete a record based on where condition --- DELETE FROM table_name WHERE condition;	
+16)Drop… Delete an entire table in the db.--- DROP TABLE table_name;
+17)To delete all row data without a where clause uses truncate --- TRUNCATE TABLE table_name; 
+18)To update a data in the table --- UPDATE table_name SET column1 = value1, column2 = value2, ... WHERE condition;
+19)To create a backup table before drop the table --- CREATE TABLE table_name AS TABLE original_table_name;
+20)Insert values into the table --- INSERT INTO table_name(column_name data_type, column_name2 data_type)VALUES();
+21)Column renaming --- ALTER TABLE table_name RENAME COLUMN current_column_name TO new_column_name;
+23)	Adding a column in the table --- ALTER TABLE table_name ADD COLUMN new_column_name column_type;
+24)For getting column names---- SELECT column_name FROM information_schema.columns WHERE table_name = '';
+25) To see all the tables in the database --- SELECT table_name FROM information_schema.tables WHERE table_schema='public';
+
+
+
+
+
+
+
